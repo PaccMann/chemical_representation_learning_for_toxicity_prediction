@@ -1,0 +1,62 @@
+{
+    "augment_smiles": true,
+    "embedding": "pretrained",
+    "embedding_path": "data/smiles_vae_embeddings.pkl",
+    "fix_embeddings": true,
+    "augment_test_smiles": false,
+    "sanitize": true,
+    "canonical": false,
+    "test_canonical": true,
+    "kekulize": false,
+    "all_bonds_explicit": false,
+    "all_hs_explicit": false,
+    "randomize": false,
+    "remove_bonddir": false,
+    "remove_chirality": false,
+    "selfies": false,
+    "smiles_start_stop_token": true,
+    "stacked_dense_hidden_sizes": [
+        1024,
+        512
+    ],
+    "activation_fn": "relu",
+    "dropout": 0.5,
+    "batch_norm": true,
+    "filters": [
+        128,
+        128,
+        128
+    ],
+    "multiheads": [
+        6,
+        6,
+        6,
+        6
+    ],
+    "smiles_embedding_size": 256,
+    "kernel_sizes": [
+        [
+            3,
+            256
+        ],
+        [
+            5,
+            256
+        ],
+        [
+            11,
+            256
+        ]
+    ],
+    "ensemble_size": 5,
+    "ensemble": "score",
+    "smiles_attention_size": 256,
+    "embed_scale_grad": false,
+    "batch_size": 256,
+    "lr": 0.0001,
+    "optimizer": "adam",
+    "loss_fn": "binary_cross_entropy_ignore_nan_and_sum",
+    "epochs": 200,
+    "save_model": 25,
+    "smiles_vocabulary_size": 87
+}
