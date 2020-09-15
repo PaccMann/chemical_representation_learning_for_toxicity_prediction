@@ -1,4 +1,4 @@
-"""Install package."""
+source"""Install package."""
 from setuptools import setup, find_packages
 
 setup(
@@ -15,10 +15,9 @@ setup(
         'jab@zurich.ibm.com, greta.markert@gmail.com, drugilsberg@gmail.com'
     ),
     install_requires=[
-        'numpy', 'torch', 'six', 'scikit-learn', 'tensorflow<2.0',
-        'deepchem==2.2.1.dev54', 'Pillow==7.0.0',
-        'paccmann_predictor @ git+https://github.com/PaccMann/paccmann_predictor@latest',
-        'pytoda @ git+https://github.com/PaccMann/paccmann_datasets@0.1.0   '
+        'paccmann_predictor @ git+https://github.com/PaccMann/paccmann_predictor',
+        'torch', 'deepchem', 'six',
+        # 'rdkit'
     ],
     packages=find_packages('.'),
     zip_safe=False

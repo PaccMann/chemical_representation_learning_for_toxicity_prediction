@@ -6,7 +6,8 @@ dependencies:
   - python>=3.6,<3.8
   - pip>=19.1
   - pip:
-    - pytoda @ git+https://github.com/PaccMann/paccmann_datasets@0.1.0
+    - pytoda @ git+https://github.com/PaccMann/paccmann_datasets@0.1.1
+    - paccmann_predictor @ git+https://github.com/PaccMann/paccmann_predictor@0.0.2  
     - numpy>=1.14.3
     - torch==1.0.1
     - deepchem==2.2.1.dev54
