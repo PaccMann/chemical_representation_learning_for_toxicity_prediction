@@ -16,7 +16,7 @@ setup(
     ),
     install_requires=[
         'paccmann_predictor @ git+https://github.com/PaccMann/paccmann_predictor',
-        'torch', 'deepchem', 'six',
+        'torch', 'deepchem', 'tensorflow<2.0', 'six',
         # 'rdkit'
     ],
     packages=find_packages('.'),
