@@ -1,4 +1,4 @@
-source"""Install package."""
+"""Install package."""
 from setuptools import setup, find_packages
 
 setup(
