@@ -42,7 +42,7 @@ Download sample data from the Tox21 database and store it in a folder called `da
 ```console
 (toxsmi) $ python3 scripts/train_tox.py data/tox21_train.csv \
 data/tox21_score.csv data/tox21.smi data/smiles_language_tox21.pkl \
-models params/mca.json test
+models params/mca.json test --embedding_path data/smiles_vae_embeddings.pkl
 ```
 
 Type `python scripts/train_tox.py -h` for further help.
