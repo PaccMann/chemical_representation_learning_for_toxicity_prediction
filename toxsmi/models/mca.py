@@ -144,7 +144,7 @@ class MCAMultiTask(nn.Module):
                 with open(params['embedding_path'], 'rb') as f:
                     embeddings = pickle.load(f)
             except KeyError:
-                raise KeyError('Pack path for embeddings into .json')
+                raise KeyError('Path for embeddings is missing in params.')
 
             # Plug into layer
             self.smiles_embedding = nn.Embedding(

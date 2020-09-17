@@ -53,11 +53,16 @@ parser.add_argument(
     'params_filepath', type=str, help='Path to the parameter file.'
 )
 parser.add_argument('training_name', type=str, help='Name for the training.')
+parser.add_argument(
+    '--embedding_path', type=str, default=None,
+    help='Optional path to a pickle object of a pretrained embedding.'
+)
 
 
 def main(
     train_scores_filepath, test_scores_filepath, smi_filepath,
-    smiles_language_filepath, model_path, params_filepath, training_name
+    smiles_language_filepath, model_path, params_filepath, training_name,
+    embedding_path=None
 ):
 
     logging.basicConfig(level=logging.INFO, format='%(message)s')
@@ -69,6 +74,9 @@ def main(
     params = {}
     with open(params_filepath) as fp:
         params.update(json.load(fp))
+
+    if embedding_path:
+        params['embedding_path'] = embedding_path
 
     # Create model directory and dump files
     model_dir = os.path.join(model_path, training_name)
@@ -405,5 +413,5 @@ if __name__ == '__main__':
     main(
         args.train_scores_filepath, args.test_scores_filepath,
         args.smi_filepath, args.smiles_language_filepath, args.model_path,
-        args.params_filepath, args.training_name
+        args.params_filepath, args.training_name, args.embedding_path
     )

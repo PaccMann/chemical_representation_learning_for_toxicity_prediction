@@ -1,7 +1,6 @@
 {
     "augment_smiles": true,
     "embedding": "pretrained",
-    "embedding_path": "data/smiles_vae_embeddings.pkl",
     "fix_embeddings": true,
     "augment_test_smiles": false,
     "sanitize": true,
