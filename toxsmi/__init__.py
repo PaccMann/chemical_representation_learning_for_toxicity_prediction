@@ -1,3 +1,3 @@
-"""Initialization for `toxsmi.models` submodule."""
-__version__ = '0.0.1'
+"""Initialization for `toxsmi` module."""
+__version__ = '0.0.2'
 __name__ = 'toxsmi'
