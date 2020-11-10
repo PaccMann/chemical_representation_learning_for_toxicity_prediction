@@ -1,4 +1,3 @@
-[![Build Status](https://travis.ibm.com/PaccMann/toxsmi.svg?token=BoxDFQJLkgmss6yytwxe&branch=prepare_release)](https://travis.ibm.com/PaccMann/toxsmi)
 # toxsmi
 
 PyTorch implementation of `toxsmi`, a package for toxicity prediction models
