@@ -151,7 +151,7 @@ def main(
     ):
         raise ValueError(
             'Epistemic uncertainty evaluation not supported if augmentation '
-            'is enabled for test data.'
+            'is not enabled for test data.'
         )
 
     # Generally, if sanitize is True molecules are de-kekulized. Augmentation
@@ -174,6 +174,10 @@ def main(
         selfies=params.get('selfies', False),
         sanitize=params.get('test_sanitize', False)
     )
+
+    # Dump eventually modified SMILES Language
+    smiles_language.save(os.path.join(model_dir, 'smiles_language.pkl'))
+
     logger.info(smiles_dataset._dataset.transform)
     logger.info(smiles_test_dataset._dataset.transform)
 
@@ -236,7 +240,7 @@ def main(
     model = MODEL_FACTORY[params.get('model_fn', 'mca')](params).to(device)
     logger.info(model)
 
-    logger.info(f'Parameters follow')
+    logger.info('Parameters follow')
     for name, param in model.named_parameters():
         logger.info((name, param.shape))
 
