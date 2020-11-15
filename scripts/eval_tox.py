@@ -132,18 +132,18 @@ def main(
     # Start evaluation
     logger.info('Evaluation about to start...\n')
 
-    target_preds = []
-    attention_scores = []
-    smiles = []
+    preds, labels, attention_scores, smiles = [], [], [], []
     for smiles_batch, labels_batch in loader:
-        preds, pred_dict = model(smiles_batch.to(device))
-        target_preds.extend(preds.detach().squeeze().tolist())
+        pred, pred_dict = model(smiles_batch.to(device))
+        preds.extend(pred.detach().squeeze().tolist())
         attention_scores.extend(
             torch.stack(pred_dict['smiles_attention'], dim=1).detach()
         )
         smiles.extend(
             [smiles_language.token_indexes_to_smiles(s.tolist()) for s in smiles_batch]
         )
+        labels.extend(labels_batch.squeeze().tolist())
+        print(pred.shape, labels_batch.shape)
     # Scores are now 3D: num_samples x num_att_layers x padding_length
     attention = torch.stack(attention_scores, dim=0).numpy()
     logger.info(f'Shape of attention scores {attention.shape}.')
@@ -153,11 +153,15 @@ def main(
         data=attention_avg,
         columns=[f'att_idx_{i}' for i in range(attention_avg.shape[1])],
     )
-    lab_df = pd.DataFrame(
-        data=target_preds,
-        columns=[f'class_{i}' for i in range(len(target_preds[0]))],
+    pred_df = pd.DataFrame(
+        data=preds,
+        columns=[f'pred_{i}' for i in range(len(preds[0]))],
     )
-    df = pd.concat([lab_df, att_df], axis=1)
+    lab_df = pd.DataFrame(
+        data=labels,
+        columns=[f'label_{i}' for i in range(len(labels[0]))],
+    )
+    df = pd.concat([pred_df, lab_df, att_df], axis=1)
     df.insert(0, 'SMILES', smiles)
     df.to_csv(os.path.join(output_folder, 'results.csv'), index=False)
 
