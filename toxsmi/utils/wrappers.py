@@ -13,7 +13,7 @@ DEVICE = get_device()
 class BCEIgnoreNaN(nn.Module):
     """Wrapper for BCE function that ignores NaNs"""
 
-    def __init__(self, reduction: str, class_weights: tuple = (1, 3)) -> None:
+    def __init__(self, reduction: str, class_weights: tuple = (1, 1)) -> None:
         """
 
         Args:
