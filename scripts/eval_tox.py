@@ -143,7 +143,6 @@ def main(
             [smiles_language.token_indexes_to_smiles(s.tolist()) for s in smiles_batch]
         )
         labels.extend(labels_batch.squeeze().tolist())
-        print(pred.shape, labels_batch.shape)
     # Scores are now 3D: num_samples x num_att_layers x padding_length
     attention = torch.stack(attention_scores, dim=0).numpy()
     logger.info(f'Shape of attention scores {attention.shape}.')

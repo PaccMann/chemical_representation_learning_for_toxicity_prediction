@@ -242,6 +242,11 @@ class MCAMultiTask(nn.Module):
         self.loss_fn = LOSS_FN_FACTORY[
             params.get('loss_fn', 'binary_cross_entropy_ignore_nan_and_sum')
         ]   # yapf: disable
+        # Set class weights manually
+        if 'binary_cross_entropy_ignore_nan' in params.get(
+            'loss_fn', 'binary_cross_entropy_ignore_nan_and_sum'
+        ):
+            self.loss_fn.class_weights = params.get('class_weights', [1, 1])
 
     def forward(self, smiles: torch.Tensor) -> Tuple[torch.Tensor, dict]:
         """Forward pass through the MCA.
@@ -250,7 +255,7 @@ class MCAMultiTask(nn.Module):
             smiles (torch.Tensor): type int and shape: [batch_size, seq_length]
 
         Returns:
-            (torch.Tensor, torch.Tensor): predictions, prediction_dict
+            (torch.Tensor, dict): predictions, prediction_dict
 
             predictions are toxicity predictions of shape `[bs, num_tasks]`.
             prediction_dict includes the prediction and attention weights.

@@ -25,15 +25,23 @@ class BCEIgnoreNaN(nn.Module):
         self.loss = nn.BCELoss(reduction='none')
 
         if reduction != 'sum' and reduction != 'mean':
-            raise ValueError(f'Chose reduction type as mean or sum, not {reduction}')
+            raise ValueError(
+                f'Chose reduction type as mean or sum, not {reduction}'
+            )
         self.reduction = reduction
 
         if not isinstance(class_weights, Iterable):
-            raise TypeError(f'Pass iterable for weights, not: {type(class_weights)}')
+            raise TypeError(
+                f'Pass iterable for weights, not: {type(class_weights)}'
+            )
         if not len(class_weights) == 2:
-            raise ValueError(f'Class weight len should be 2, not: {len(class_weights)}')
+            raise ValueError(
+                f'Class weight len should be 2, not: {len(class_weights)}'
+            )
         if not all(w > 0 for w in class_weights):
-            raise ValueError(f'All weigths should be positive not: {class_weights}')
+            raise ValueError(
+                f'All weigths should be positive not: {class_weights}'
+            )
 
         self.class_weights = class_weights
         logger.info(f'Class weights are {class_weights}.')
