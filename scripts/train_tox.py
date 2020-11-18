@@ -320,8 +320,6 @@ def main(
         # Remove NaNs from labels to compute scores
         predictions = predictions[~np.isnan(labels)]
         labels = labels[~np.isnan(labels)]
-        logger.info('length labels:', len(labels), labels)
-        logger.info('length predictions:', len(predictions), predictions)
         test_loss_a = test_loss / len(test_loader)
         fpr, tpr, _ = roc_curve(labels, predictions)
         test_roc_auc_a = auc(fpr, tpr)
