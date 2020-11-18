@@ -1,0 +1,31 @@
+{
+    "model_fn": "mca",
+    "weight_name": "best_ROC-AUC_mca",
+    "number_of_tunable_layers": 10,
+    "fresh_dense_sizes": [
+        512,
+        512,
+        512
+    ],
+    "activation_fn": "relu",
+    "dropout": 0.5,
+    "batch_norm": true,
+    "num_tasks": 12,
+    "augment_smiles": true,
+    "augment_test_smiles": false,
+    "sanitize": true,
+    "canonical": false,
+    "test_canonical": true,
+    "kekulize": false,
+    "smiles_start_stop_token": true,
+    "batch_size": 256,
+    "lr": 0.00001,
+    "optimizer": "adam",
+    "loss_fn": "binary_cross_entropy_ignore_nan_and_sum",
+    "class_weights": [
+        1,
+        1
+    ],
+    "epochs": 200,
+    "save_model": 25
+}
