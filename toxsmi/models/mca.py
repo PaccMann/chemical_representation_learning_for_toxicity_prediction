@@ -1,9 +1,9 @@
 import pickle
 from collections import OrderedDict
+from typing import Tuple
 
 import torch
 import torch.nn as nn
-
 from paccmann_predictor.utils.hyperparams import ACTIVATION_FN_FACTORY
 from paccmann_predictor.utils.layers import (
     alpha_projection, convolutional_layer, dense_layer, smiles_projection
@@ -23,7 +23,7 @@ class MCAMultiTask(nn.Module):
         - MultiLabel classification implementation (sigmoidal in last layer)
     """
 
-    def __init__(self, params, *args, **kwargs):
+    def __init__(self, params: dict, *args, **kwargs):
         """Constructor.
 
         Args:
@@ -242,15 +242,20 @@ class MCAMultiTask(nn.Module):
         self.loss_fn = LOSS_FN_FACTORY[
             params.get('loss_fn', 'binary_cross_entropy_ignore_nan_and_sum')
         ]   # yapf: disable
+        # Set class weights manually
+        if 'binary_cross_entropy_ignore_nan' in params.get(
+            'loss_fn', 'binary_cross_entropy_ignore_nan_and_sum'
+        ):
+            self.loss_fn.class_weights = params.get('class_weights', [1, 1])
 
-    def forward(self, smiles):
+    def forward(self, smiles: torch.Tensor) -> Tuple[torch.Tensor, dict]:
         """Forward pass through the MCA.
 
         Args:
             smiles (torch.Tensor): type int and shape: [batch_size, seq_length]
 
         Returns:
-            (torch.Tensor, torch.Tensor): predictions, prediction_dict
+            (torch.Tensor, dict): predictions, prediction_dict
 
             predictions are toxicity predictions of shape `[bs, num_tasks]`.
             prediction_dict includes the prediction and attention weights.
@@ -298,14 +303,14 @@ class MCAMultiTask(nn.Module):
         }
         return predictions, prediction_dict
 
-    def loss(self, yhat, y):
+    def loss(self, yhat: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
         return self.loss_fn(yhat, y)
 
-    def load(self, path, *args, **kwargs):
+    def load(self, path: str, *args, **kwargs) -> None:
         """Load model from path."""
         weights = torch.load(path, *args, **kwargs)
         self.load_state_dict(weights)
 
-    def save(self, path, *args, **kwargs):
+    def save(self, path: str, *args, **kwargs) -> None:
         """Save model to path."""
         torch.save(self.state_dict(), path, *args, **kwargs)
