@@ -9,10 +9,7 @@ from time import time
 
 import numpy as np
 import torch
-from paccmann_predictor.utils.hyperparams import (
-    ACTIVATION_FN_FACTORY, OPTIMIZER_FACTORY
-)
-from paccmann_predictor.utils.layers import dense_layer
+from paccmann_predictor.utils.hyperparams import OPTIMIZER_FACTORY
 from paccmann_predictor.utils.utils import get_device
 from pytoda.datasets import AnnotatedDataset, SMILESDataset
 from pytoda.smiles.smiles_language import SMILESLanguage
@@ -21,7 +18,6 @@ from sklearn.metrics import (
 )
 from toxsmi.models import MODEL_FACTORY
 from toxsmi.utils import disable_rdkit_logging
-from toxsmi.utils.layers import EnsembleLayer
 from toxsmi.utils.transferlearning import update_mca_model
 
 # setup logging
