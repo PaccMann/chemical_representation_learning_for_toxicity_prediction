@@ -148,14 +148,14 @@ def main(
             padding=params.get('padd_smiles', True),
             add_start_and_stop=params.get('add_start_stop_token', True),
             augment=True,  # Natively true for aleatoric uncertainity estimate
-            canonical=params.get('canonical', False),
-            kekulize=params.get('kekulize', False),
-            all_bonds_explicit=params.get('all_bonds_explicit', False),
-            all_hs_explicit=params.get('all_hs_explicit', False),
-            randomize=params.get('randomize', False),
-            remove_bonddir=params.get('remove_bonddir', False),
-            remove_chirality=params.get('remove_chirality', False),
-            selfies=params.get('selfies', False)
+            canonical=params.get('test_canonical', False),
+            kekulize=params.get('test_kekulize', False),
+            all_bonds_explicit=params.get('test_all_bonds_explicit', False),
+            all_hs_explicit=params.get('test_all_hs_explicit', False),
+            remove_bonddir=params.get('test_remove_bonddir', False),
+            remove_chirality=params.get('test_remove_chirality', False),
+            selfies=params.get('selfies', False),
+            sanitize=params.get('test_sanitize', False),
         )
         ale_dataset = AnnotatedDataset(
             annotations_filepath=labels_filepath,
@@ -176,14 +176,14 @@ def main(
             padding=params.get('padd_smiles', True),
             add_start_and_stop=params.get('add_start_stop_token', True),
             augment=False,  # Natively false for epistemic uncertainity estimate
-            canonical=params.get('canonical', False),
-            kekulize=params.get('kekulize', False),
-            all_bonds_explicit=params.get('all_bonds_explicit', False),
-            all_hs_explicit=params.get('all_hs_explicit', False),
-            randomize=params.get('randomize', False),
-            remove_bonddir=params.get('remove_bonddir', False),
-            remove_chirality=params.get('remove_chirality', False),
-            selfies=params.get('selfies', False)
+            canonical=params.get('test_canonical', False),
+            kekulize=params.get('test_kekulize', False),
+            all_bonds_explicit=params.get('test_all_bonds_explicit', False),
+            all_hs_explicit=params.get('test_all_hs_explicit', False),
+            remove_bonddir=params.get('test_remove_bonddir', False),
+            remove_chirality=params.get('test_remove_chirality', False),
+            selfies=params.get('selfies', False),
+            sanitize=params.get('test_sanitize', False),
         )
         epi_dataset = AnnotatedDataset(
             annotations_filepath=labels_filepath,
