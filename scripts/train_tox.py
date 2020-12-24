@@ -8,7 +8,6 @@ import sys
 from time import time
 
 import numpy as np
-import torch
 from sklearn.metrics import (
     auc, average_precision_score, precision_recall_curve, roc_curve
 )
@@ -24,6 +23,9 @@ from pytoda.smiles.transforms import SMILESToMorganFingerprints
 from pytoda.transforms import Compose, ToTensor
 from toxsmi.models import MODEL_FACTORY
 from toxsmi.utils import disable_rdkit_logging
+
+# Ensure Ubuntu/rdkit compatibility
+import torch
 
 # setup logging
 logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
