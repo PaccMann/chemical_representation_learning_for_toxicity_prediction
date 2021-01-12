@@ -1,0 +1,30 @@
+{
+    "model_fn": "rnn",
+    "rnn_cell_type": "nBRC",
+    "rnn_cell_size": 256,
+    "bidirectional": true,
+    "n_layers": 2,
+    "embedding": "learned",
+    "augment_smiles": true,
+    "augment_test_smiles": false,
+    "sanitize": false,
+    "canonical": false,
+    "test_canonical": true,
+    "smiles_embedding_size": 32,
+    "smiles_start_stop_token": true,
+    "stacked_dense_hidden_sizes": [
+        1024,
+        512
+    ],
+    "activation_fn": "relu",
+    "dropout": 0.5,
+    "batch_norm": true,
+    "ensemble_size": 5,
+    "batch_size": 64,
+    "lr": 0.0001,
+    "optimizer": "adam",
+    "loss_fn": "binary_cross_entropy_ignore_nan_and_sum",
+    "epochs": 200,
+    "save_model": 25,
+    "smiles_vocabulary_size": 87
+}
