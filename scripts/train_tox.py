@@ -134,6 +134,7 @@ def main(
         sanitize=params.get('sanitize', True)
     )
 
+    # include arg label_columns if data file has any unwanted columns (such as index) to be ignored.
     train_dataset = AnnotatedDataset(
         annotations_filepath=train_scores_filepath,
         dataset=smiles_dataset,
@@ -183,6 +184,7 @@ def main(
     logger.info(smiles_dataset._dataset.transform)
     logger.info(smiles_test_dataset._dataset.transform)
 
+    # include arg label_columns if data file has any unwanted columns (such as index) to be ignored.
     test_dataset = AnnotatedDataset(
         annotations_filepath=test_scores_filepath,
         dataset=smiles_test_dataset,
@@ -241,6 +243,7 @@ def main(
 
     model = MODEL_FACTORY[params.get('model_fn', 'mca')](params).to(device)
     logger.info(model)
+    logger.info(model.loss_fn.class_weights)
 
     logger.info('Parameters follow')
     for name, param in model.named_parameters():
