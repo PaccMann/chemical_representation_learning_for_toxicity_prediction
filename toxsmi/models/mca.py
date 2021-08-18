@@ -84,33 +84,18 @@ class MCAMultiTask(nn.Module):
         # Model architecture (hyperparameter)
         self.multiheads = params.get('multiheads', [4, 4, 4, 4])
         self.filters = params.get('filters', [64, 64, 64])
-        self.hidden_sizes = (
-            [
-                self.multiheads[0] * params['smiles_embedding_size'] + sum(
-                    [h * f for h, f in zip(self.multiheads[1:], self.filters)]
-                )
-            ] + params.get('stacked_hidden_sizes', [1024, 512])
-        )
+        #self.hidden_sizes = (
+         #   [
+          #      self.multiheads[0] * params['smiles_embedding_size'] + sum(
+           #         [h * f for h, f in zip(self.multiheads[1:], self.filters)]
+            #    )
+            #] + params.get('stacked_hidden_sizes', [1024, 512])
+        #)
 
         self.dropout = params.get('dropout', 0.5)
         self.use_batch_norm = self.params.get('batch_norm', True)
         self.act_fn = ACTIVATION_FN_FACTORY[
             params.get('activation_fn', 'relu')]
-        self.kernel_sizes = params.get(
-            'kernel_sizes', [
-                [3, params['smiles_embedding_size']],
-                [5, params['smiles_embedding_size']],
-                [11, params['smiles_embedding_size']]
-            ]
-        )
-        if len(self.filters) != len(self.kernel_sizes):
-            raise ValueError(
-                'Length of filter and kernel size lists do not match.'
-            )
-        if len(self.filters) + 1 != len(self.multiheads):
-            raise ValueError(
-                'Length of filter and multihead lists do not match'
-            )
 
         # Build the model. First the embeddings
         if params.get('embedding', 'learned') == 'learned':
@@ -159,6 +144,31 @@ class MCAMultiTask(nn.Module):
         else:
             raise ValueError(f"Unknown embedding type: {params['embedding']}")
 
+        self.kernel_sizes = params.get(
+            'kernel_sizes', [
+                [3, self.smiles_embedding.weight.shape[1]],
+                [5, self.smiles_embedding.weight.shape[1]],
+                [11, self.smiles_embedding.weight.shape[1]]
+            ]
+        )
+
+        self.hidden_sizes = (
+            [
+                self.multiheads[0] * self.smiles_embedding.weight.shape[1] + sum(
+                    [h * f for h, f in zip(self.multiheads[1:], self.filters)]
+                )
+            ] + params.get('stacked_hidden_sizes', [1024, 512])
+        )
+
+        if len(self.filters) != len(self.kernel_sizes):
+            raise ValueError(
+                'Length of filter and kernel size lists do not match.'
+            )
+        if len(self.filters) + 1 != len(self.multiheads):
+            raise ValueError(
+                'Length of filter and multihead lists do not match'
+            )
+
         self.convolutional_layers = nn.Sequential(
             OrderedDict(
                 [
@@ -177,7 +187,7 @@ class MCAMultiTask(nn.Module):
             )
         )
 
-        smiles_hidden_sizes = [params['smiles_embedding_size']] + self.filters
+        smiles_hidden_sizes = [self.smiles_embedding.weight.shape[1]] + self.filters
         self.smiles_projections = nn.Sequential(
             OrderedDict(
                 [
