@@ -1,0 +1,74 @@
+---
+name: build
+on: [push]
+jobs:
+  conda-tests:
+    name: Test with conda (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    continue-on-error: ${{ matrix.experimental }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-18.04
+            pip_cache_path: ~/.cache/pip
+            experimental: false
+          - os: macos-latest
+            pip_cache_path: ~/Library/Caches/pip
+            experimental: false
+    defaults:
+      run:
+        shell: bash -l {0}  # For conda
+    env:
+      # Increase this value to reset cache if conda.yml and requirements.txt
+      # have not changed
+      CACHE_NUMBER: 0
+    steps:
+      - uses: actions/checkout@v2
+      - name: Checkout and setup python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.6
+          architecture: 'x64'
+
+      - name: Cache conda
+        uses: actions/cache@v2
+        with:
+          path: ~/conda_pkgs_dir  # from: conda-incubator/setup-miniconda@v2
+          key: ${{ runner.os }}-conda-${{ env.CACHE_NUMBER }}-${{
+            hashFiles('conda.yml') }}
+
+      - name: Cache pip
+        uses: actions/cache@v2
+        with:
+          path: ${{ matrix.pip_cache_path }}
+          key: ${{ runner.os }}-pip--${{ env.CACHE_NUMBER }}-${{
+            hashFiles('requirements.txt') }}
+
+      - name: Conda environment setup
+        uses: conda-incubator/setup-miniconda@v2
+        with:
+          activate-environment: toxsmi
+          environment-file: conda.yml
+          auto-activate-base: false
+          use-only-tar-bz2: true  # This needs to be set for proper caching
+          auto-update-conda: true  # Required for windows for `use-only-tar-bz2`
+
+      - name: Install dependencies and test code 
+        run: |
+          pip3 install --no-cache-dir -r requirements.txt
+          pip3 install --no-deps .
+          python3 -c "import toxsmi"
+          python3 scripts/train_baselines.py -h
+          python3 scripts/train_tox.py -h
+
+      - name: Send Slack notification
+        uses: 8398a7/action-slack@v2
+        if: always()
+        with:
+          status: ${{ job.status }}
+          text: "CI Build ${{ matrix.os }}"
+          author_name: ${{ github.actor }}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_HOOK_URL }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

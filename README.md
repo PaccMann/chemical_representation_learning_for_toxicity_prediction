@@ -1,3 +1,5 @@
+[![Build Status](https://github.com/PaccMann/toxsmi/actions/workflows/build.yml/badge.svg)](https://github.com/PaccMann/toxsmi/actions/workflows/build.yml)
+
 # toxsmi
 
 PyTorch implementation of `toxsmi`, a package for toxicity prediction models
