@@ -84,13 +84,6 @@ class MCAMultiTask(nn.Module):
         # Model architecture (hyperparameter)
         self.multiheads = params.get('multiheads', [4, 4, 4, 4])
         self.filters = params.get('filters', [64, 64, 64])
-        #self.hidden_sizes = (
-         #   [
-          #      self.multiheads[0] * params['smiles_embedding_size'] + sum(
-           #         [h * f for h, f in zip(self.multiheads[1:], self.filters)]
-            #    )
-            #] + params.get('stacked_hidden_sizes', [1024, 512])
-        #)
 
         self.dropout = params.get('dropout', 0.5)
         self.use_batch_norm = self.params.get('batch_norm', True)
