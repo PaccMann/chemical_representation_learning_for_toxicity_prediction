@@ -4,6 +4,9 @@ services:
 before_script:
   - docker pull drugilsberg/rdkit-ubuntu:latest
   - docker build -f .travis/Dockerfile -t toxsmi .
+branches:
+  except:
+    - testing
 script:
   - docker run -it toxsmi python3 -c "import toxsmi"
   - docker run -it toxsmi python3 scripts/train_baselines.py -h

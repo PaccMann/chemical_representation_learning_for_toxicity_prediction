@@ -73,7 +73,7 @@ class BCEIgnoreNaN(nn.Module):
         weight_tensor[y == 0.0] = self.class_weights[0]
         weight_tensor[y == 1.0] = self.class_weights[1]
 
-        out = loss * weight_tensor
+        out = loss * weight_tensor.to(DEVICE)
 
         if self.reduction == 'mean':
             return torch.mean(out)
