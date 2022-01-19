@@ -11,7 +11,7 @@ from SMILES.
 
 ## Installation
 
-The library itself has few dependencies (see [setup.py](setup.py)) with loose requirements. 
+The library itself has few dependencies (see [setup.py](setup.py)) with loose requirements.
 
 Create a conda environment:
 
@@ -22,7 +22,7 @@ conda env create -f conda.yml
 Activate the environment:
 
 ```sh
-conda activate toxsmi
+conda activate toxsmi_test
 ```
 
 Install in editable mode for development:
@@ -37,7 +37,7 @@ In the `scripts` directory is a training script [train_tox.py](./scripts/train_t
 of `toxsmi`.
 
 Download sample data from the Tox21 database and store it in a folder called `data`
-[here](https://ibm.box.com/s/kahxnlg2k2s0x3z0r5fa6y67tmfhs6or). 
+[here](https://ibm.box.com/s/kahxnlg2k2s0x3z0r5fa6y67tmfhs6or).
 
 
 ```console
