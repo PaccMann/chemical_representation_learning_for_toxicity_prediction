@@ -57,10 +57,5 @@
     "loss_fn": "binary_cross_entropy_ignore_nan_and_sum",
     "epochs": 200,
     "save_model": 25,
-    "smiles_vocabulary_size": 87,
-    "num_tasks": 1,
-    "class_weights": [
-        1,
-        5
-    ]
+    "smiles_vocabulary_size": 87
 }
