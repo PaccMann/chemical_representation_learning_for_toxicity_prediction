@@ -19,7 +19,7 @@ Moreover,
 - `10_fold_stratified_cross_validation/`: A subfolder which contains the train / test split using 10-fold stratified cross-validation, of the form `cytotox_train0-10.csv` and `cytotox_test0-10.csv`.
 
 ### 10-fold CV
-In order to run the 10-fold stratified cross-validation on the cluster of the Freie Universität Berlin, use the bash script below (by adapting your email):
+In order to run the 10-fold stratified cross-validation on the cluster of the Freie Universität Berlin, use the bash script below called `cytotox_10_fold_cross_validation.sh` (by adapting your email):
 
 ```bash
 #!/bin/bash
@@ -49,4 +49,10 @@ fold=${parameters[0]}
 python3 scripts/train_tox.py data/cytotoxicity/10_fold_stratified_cross_validation/cytotox_train${fold}-$K.csv \
 data/cytotoxicity/10_fold_stratified_cross_validation/cytotox_test${fold}-$K.csv data/cytotoxicity/cytotox.smi data/smiles_language_tox21.pkl \
 models${fold}-$K params/mca.json test --embedding_path data/smiles_vae_embeddings.pkl
+```
+
+And execute the bash script by running the following:
+
+```console
+sbatch --array=0-9 cytotox_10_fold_cross_validation.sh
 ```
