@@ -11,7 +11,7 @@ Similar to what exists in the `data` folder, this subfolder should contain:
 - `cytotox_score.csv`:
   - The labels for all entries in the cytotoxicity data set
 - `cytotox.smi`:
-  - All SMILES in the cytotoxicity data set along with their mold_id
+  - All SMILES in the cytotoxicity data set along with their mol_id
 
 
 Moreover,
