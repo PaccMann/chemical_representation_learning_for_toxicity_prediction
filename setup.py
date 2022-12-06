@@ -33,7 +33,7 @@ setup(
         'jab@zurich.ibm.com, greta.markert@gmail.com, drugilsberg@gmail.com'
     ),
     install_requires=[
-        'paccmann_predictor @ git+https://github.com/PaccMann/paccmann_predictor',
+        'paccmann_predictor @ git+https://github.com/PaccMann/paccmann_predictor@sarscov2',
         'torch',  'Pillow', 'six'
     ],
     packages=find_packages('.'),
