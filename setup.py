@@ -34,7 +34,7 @@ setup(
     ),
     install_requires=[
         'paccmann_predictor @ git+https://github.com/PaccMann/paccmann_predictor',
-        'torch', 'deepchem>=2.4', 'tensorflow>=2.0', 'Pillow', 'six'
+        'torch',  'Pillow', 'six'
     ],
     packages=find_packages('.'),
     zip_safe=False
