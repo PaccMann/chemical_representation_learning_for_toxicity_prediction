@@ -303,6 +303,7 @@ class MCAMultiTask(nn.Module):
         prediction_dict = {
             'smiles_attention': smiles_alphas,
             'toxicities': predictions,
+            'encodings': encodings
         }
         return predictions, prediction_dict
 
