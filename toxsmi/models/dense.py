@@ -1,15 +1,15 @@
 import torch
 import torch.nn as nn
-
 from paccmann_predictor.utils.hyperparams import ACTIVATION_FN_FACTORY
 from paccmann_predictor.utils.layers import dense_layer
 from paccmann_predictor.utils.utils import get_device
+
 from toxsmi.utils.hyperparams import LOSS_FN_FACTORY
 from toxsmi.utils.layers import EnsembleLayer
 
 
 class Dense(nn.Module):
-    """ This is a Dense model for validation. To be trained on fingerprints """
+    """This is a Dense model for validation. To be trained on fingerprints"""
 
     def __init__(self, params, *args, **kwargs):
         """Constructor.
@@ -33,15 +33,13 @@ class Dense(nn.Module):
 
         self.device = get_device()
         self.params = params
-        self.num_drug_features = params.get('num_drug_features', 512)
-        self.num_tasks = params.get('num_tasks', 12)
+        self.num_drug_features = params.get("num_drug_features", 512)
+        self.num_tasks = params.get("num_tasks", 12)
         self.hidden_sizes = params.get(
-            'stacked_dense_hidden_sizes',
-            [self.num_drug_features, 5000, 1000, 500]
+            "stacked_dense_hidden_sizes", [self.num_drug_features, 5000, 1000, 500]
         )
-        self.dropout = params.get('dropout', 0.0)
-        self.act_fn = ACTIVATION_FN_FACTORY[
-            params.get('activation_fn', 'relu')]
+        self.dropout = params.get("dropout", 0.0)
+        self.act_fn = ACTIVATION_FN_FACTORY[params.get("activation_fn", "relu")]
         self.dense_layers = nn.ModuleList(
             [
                 dense_layer(
@@ -49,20 +47,22 @@ class Dense(nn.Module):
                     self.hidden_sizes[ind + 1],
                     act_fn=self.act_fn,
                     dropout=self.dropout,
-                    batch_norm=self.params.get('batch_norm', True)
-                ).to(self.device) for ind in range(len(self.hidden_sizes) - 1)
+                    batch_norm=self.params.get("batch_norm", True),
+                ).to(self.device)
+                for ind in range(len(self.hidden_sizes) - 1)
             ]
         )
 
         self.final_dense = EnsembleLayer(
-            typ=params.get('ensemble', 'score'),
+            typ=params.get("ensemble", "score"),
             input_size=self.hidden_sizes[-1],
             output_size=self.num_tasks,
-            ensemble_size=params.get('ensemble_size', 5),
-            fn=ACTIVATION_FN_FACTORY['sigmoid']
+            ensemble_size=params.get("ensemble_size", 5),
+            fn=ACTIVATION_FN_FACTORY["sigmoid"],
         ).to(self.device)
         self.loss_fn = LOSS_FN_FACTORY[
-            params.get('loss_fn', 'binary_cross_entropy_ignore_nan_and_sum')]
+            params.get("loss_fn", "binary_cross_entropy_ignore_nan_and_sum")
+        ]
 
     def forward(self, x):
         """Forward pass through the dense model.
@@ -80,7 +80,7 @@ class Dense(nn.Module):
             inputs = dl(inputs)
 
         predictions = self.final_dense(inputs)
-        prediction_dict = {'Toxicity scores': predictions}
+        prediction_dict = {"Toxicity scores": predictions}
         return predictions, prediction_dict
 
     def loss(self, yhat, y):
