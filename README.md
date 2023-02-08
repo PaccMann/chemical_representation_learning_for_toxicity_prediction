@@ -2,11 +2,10 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
-# toxsmi
+# Chemical Representation Learning for Toxicity Prediction
 
-PyTorch implementation of `toxsmi`, a package for toxicity prediction models
-from SMILES.
 
+PyTorch implementation related to the paper *Chemical Representation Learning for Toxicity Prediction* (Born et al, 2023, Under review at *Digital Discovery*).
 ## Training your own model
 
 The library itself has few dependencies (see [setup.py](setup.py)) with loose requirements. 
@@ -20,8 +19,7 @@ pip install -e .
 
 ### Start a training
 
-In the `scripts` directory is a training script [train_tox.py](./scripts/train_tox.py) that makes use
-of `toxsmi`.
+In the `scripts` directory is a training script [train_tox.py](./scripts/train_tox.py).
 
 Download sample data from the Tox21 database and store it in a folder called `data`
 [here](https://ibm.box.com/s/kahxnlg2k2s0x3z0r5fa6y67tmfhs6or). 
@@ -53,19 +51,19 @@ print(f"Clinical toxicitiy predictions: {clintox('CCO')}")
 ```
 
 ## Attention visualization
-ToxSmi uses a self-attention mechanism that can highlight chemical motifs used for the predictions.
+The model uses a self-attention mechanism that can highlight chemical motifs used for the predictions.
 In [notebooks/toxicity_attention.ipynb](notebooks/toxicity_attention.ipynb) we share a tutorial on how to create such plots:
 ![Attention](assets/attention.gif "toxicophore attention")
 
 
 ## Citation
-If you use `toxsmi` in your projects, please (temporarily) cite the following (full paper in review):
+If you use this code in your projects, please (temporarily) cite the following (full paper in review):
 
 ```bib
-@inproceedings{markert2020chemical,
+@article{born2023chemical,
   title={Chemical representation learning for toxicity prediction},
-  author={Markert, Greta and Born, Jannis and Manica, Matteo and Schneider, Gisbert and Rodriguez Martinez, M},
-  booktitle={PharML Workshop at ECML-PKDD (European Conference on Machine Learning and Principles and Practice of Knowledge Discovery in Databases)},
-  year={2020}
+  author={Born, Jannis and Markert, Greta and Janakarajan, Nikita and Kimber, Talia B. and Volkamer, Andrea and Rodriguez Martinez, Maria and Manica, Matteo},
+  journal={Under review at Digital Discovery},
+  year={2023}
 }
 ```
