@@ -102,6 +102,12 @@ class GenericIgnoreNaN(nn.Module):
             raise ValueError(f"Chose reduction type as mean or sum, not {reduction}")
         self.reduction = reduction
 
+        self.regression = loss != "binary_cross_entropy"
+
+        if self.regression:
+            # No class weights needed
+            logger.info(f"Class weights {class_weights} are ignored.")
+            return
         if not isinstance(class_weights, Iterable):
             raise TypeError(f"Pass iterable for weights, not: {type(class_weights)}")
         if not len(class_weights) == 2:
@@ -133,13 +139,15 @@ class GenericIgnoreNaN(nn.Module):
         y[y != y] = 0
         loss = self.loss(yhat, y) * nans.type(torch.float32).to(DEVICE)
 
-        # Set a tensor with class weights, equal shape to labels.
-        # NaNs are 0 in y now, but since loss is 0, downstream calc is unaffected.
-        weight_tensor = torch.ones(y.shape)
-        weight_tensor[y == 0.0] = self.class_weights[0]
-        weight_tensor[y == 1.0] = self.class_weights[1]
-
-        out = loss * weight_tensor.to(DEVICE)
+        if self.regression:
+            out = loss
+        else:
+            # Set a tensor with class weights, equal shape to labels.
+            # NaNs are 0 in y now, but since loss is 0, downstream calc is unaffected.
+            weight_tensor = torch.ones(y.shape)
+            weight_tensor[y == 0.0] = self.class_weights[0]
+            weight_tensor[y == 1.0] = self.class_weights[1]
+            out = loss * weight_tensor.to(DEVICE)
 
         if self.reduction == "mean":
             return torch.mean(out)
