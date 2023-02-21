@@ -33,8 +33,9 @@ setup(
         'jab@zurich.ibm.com, greta.markert@gmail.com, drugilsberg@gmail.com'
     ),
     install_requires=[
-        'paccmann_predictor @ git+https://github.com/PaccMann/paccmann_predictor@sarscov2',
-        'torch',  'Pillow', 'six'
+
+        'paccmann_predictor @ git+https://github.com/PaccMann/paccmann_predictor',
+        'torch', 'deepchem', 'tensorflow<2.0', 'Pillow', 'six', 'brc_pytorch'
     ],
     packages=find_packages('.'),
     zip_safe=False
