@@ -229,7 +229,9 @@ class MCAMultiTask(nn.Module):
         if params.get("ensemble", "None") == "None":
             params["ensemble_size"] = 1
 
-        self.loss = params.get("loss_fn", "binary_cross_entropy_ignore_nan_and_sum")
+        self.loss_name = params.get(
+            "loss_fn", "binary_cross_entropy_ignore_nan_and_sum"
+        )
         final_activation = (
             ACTIVATION_FN_FACTORY["sigmoid"]
             if "cross" in self.loss
@@ -243,7 +245,7 @@ class MCAMultiTask(nn.Module):
             fn=final_activation,
         )
 
-        self.loss_fn = LOSS_FN_FACTORY[self.loss]
+        self.loss_fn = LOSS_FN_FACTORY[self.loss_name]
         # Set class weights manually
         if "binary_cross_entropy_ignore_nan" in params.get(
             "loss_fn", "binary_cross_entropy_ignore_nan_and_sum"
