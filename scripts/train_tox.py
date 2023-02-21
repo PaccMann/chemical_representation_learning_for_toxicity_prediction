@@ -31,7 +31,7 @@ from sklearn.metrics import (
 
 from toxsmi.models import MODEL_FACTORY
 from toxsmi.utils import disable_rdkit_logging
-from toxsmi.performance import PerformanceLogger
+from toxsmi.utils.performance import PerformanceLogger
 
 # setup logging
 logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
