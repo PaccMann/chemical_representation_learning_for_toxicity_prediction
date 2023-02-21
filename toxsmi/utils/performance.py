@@ -37,7 +37,7 @@ class PerformanceLogger:
             self.metric_initializer("precision_recall", 0)
             self.task_final_report = self.final_report_binary_classification
         elif task == "regression":
-            self.report = self.performence_report_regression
+            self.report = self.performance_report_regression
             self.metric_initializer("rmse", 10**9)
             self.metric_initializer("mae", 10**9)
             self.metric_initializer("pearson", -1)
@@ -108,10 +108,10 @@ class PerformanceLogger:
         best = ""
         loss_a = loss / self.test_batches
 
-        pearson = pearsonr(labels, preds)[0]
-        spearman = spearmanr(labels, preds)[0]
-        rmse = np.sqrt(mean_squared_error(labels, preds))
-        mae = mean_absolute_error(labels, preds)
+        pearson = float(pearsonr(labels, preds)[0])
+        spearman = float(spearmanr(labels, preds)[0])
+        rmse = float(np.sqrt(mean_squared_error(labels, preds)))
+        mae = float(mean_absolute_error(labels, preds))
 
         logger.info(
             f"\t **** TEST **** Epoch [{self.epoch + 1}/{self.epochs}], "
