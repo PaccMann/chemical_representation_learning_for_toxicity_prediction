@@ -131,6 +131,7 @@ class PerformanceLogger:
         }
         self.metrics.append(info)
         self.preds = preds
+        self.labels = labels
         if rmse < self.rmse:
             self.rmse = rmse
             self.save_model(model, "RMSE", "best", value=rmse)
@@ -160,11 +161,10 @@ class PerformanceLogger:
                 f"\t New best performance in {metric}"
                 f" with value : {value:.7f} in epoch: {self.epoch}"
             )
-            np.save(
+            pd.DataFrame({"predictions": self.preds, "labels": self.labels}).to_csv(
                 os.path.join(
-                    self.model_path, "results", f"{metric}_best_predictions.npy"
-                ),
-                self.predictions,
+                    self.model_path, "results", f"{metric}_best_predictions.csv"
+                )
             )
             with open(
                 os.path.join(self.model_path, "results", f"{metric}_best_metrics.json"),
