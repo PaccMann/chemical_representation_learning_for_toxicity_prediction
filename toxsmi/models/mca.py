@@ -4,7 +4,6 @@ from typing import Tuple
 
 import torch
 import torch.nn as nn
-from paccmann_predictor.utils.hyperparams import ACTIVATION_FN_FACTORY
 from paccmann_predictor.utils.layers import (
     alpha_projection,
     convolutional_layer,
@@ -13,7 +12,7 @@ from paccmann_predictor.utils.layers import (
 )
 from paccmann_predictor.utils.utils import get_device
 
-from toxsmi.utils.hyperparams import LOSS_FN_FACTORY
+from toxsmi.utils.hyperparams import ACTIVATION_FN_FACTORY, LOSS_FN_FACTORY
 from toxsmi.utils.layers import EnsembleLayer
 
 
@@ -230,17 +229,21 @@ class MCAMultiTask(nn.Module):
         if params.get("ensemble", "None") == "None":
             params["ensemble_size"] = 1
 
+        self.loss = params.get("loss_fn", "binary_cross_entropy_ignore_nan_and_sum")
+        final_activation = (
+            ACTIVATION_FN_FACTORY["sigmoid"]
+            if "cross" in self.loss
+            else ACTIVATION_FN_FACTORY["none"]
+        )
         self.final_dense = EnsembleLayer(
             typ=params.get("ensemble", "score"),
             input_size=self.hidden_sizes[-1],
             output_size=self.num_tasks,
             ensemble_size=params.get("ensemble_size", 5),
-            fn=ACTIVATION_FN_FACTORY["sigmoid"],
+            fn=final_activation,
         )
 
-        self.loss_fn = LOSS_FN_FACTORY[
-            params.get("loss_fn", "binary_cross_entropy_ignore_nan_and_sum")
-        ]  # yapf: disable
+        self.loss_fn = LOSS_FN_FACTORY[self.loss]
         # Set class weights manually
         if "binary_cross_entropy_ignore_nan" in params.get(
             "loss_fn", "binary_cross_entropy_ignore_nan_and_sum"

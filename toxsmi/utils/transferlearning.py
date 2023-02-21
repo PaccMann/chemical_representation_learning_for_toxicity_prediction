@@ -3,11 +3,11 @@ import logging
 from collections import OrderedDict
 
 import torch.nn as nn
-from paccmann_predictor.utils.hyperparams import ACTIVATION_FN_FACTORY
 from paccmann_predictor.utils.layers import dense_layer
 from paccmann_predictor.utils.utils import get_device
 
 from toxsmi.models import MCAMultiTask
+from toxsmi.utils.hyperparams import ACTIVATION_FN_FACTORY
 from toxsmi.utils.layers import EnsembleLayer
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
@@ -85,12 +85,19 @@ def update_mca_model(model: MCAMultiTask, params: dict) -> MCAMultiTask:
 
     # Replace final layer
     model.num_tasks = params["num_tasks"]
+    loss = params.get("loss_fn", "binary_cross_entropy_ignore_nan_and_sum")
+    final_activation = (
+        ACTIVATION_FN_FACTORY["sigmoid"]
+        if "cross" in loss
+        else ACTIVATION_FN_FACTORY["none"]
+    )
+
     model.final_dense = EnsembleLayer(
         typ=params.get("ensemble", "score"),
         input_size=fresh_sizes[-1],
         output_size=model.num_tasks,
         ensemble_size=params.get("ensemble_size", 5),
-        fn=ACTIVATION_FN_FACTORY["sigmoid"],
+        fn=final_activation,
     )
 
     return model
