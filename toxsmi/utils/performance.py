@@ -154,7 +154,7 @@ class PerformanceLogger:
         return best
 
     def save_model(self, model: Callable, metric: str, typ: str, value: float):
-        model.save(self.model_path.format(typ, metric))
+        model.save(self.weights_path.format(typ, metric))
         if typ == "best":
             logger.info(
                 f"\t New best performance in {metric}"
