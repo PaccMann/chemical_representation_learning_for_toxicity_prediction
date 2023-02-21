@@ -1,14 +1,14 @@
 import torch
 import torch.nn as nn
-
 from paccmann_predictor.utils.hyperparams import ACTIVATION_FN_FACTORY
 from paccmann_predictor.utils.layers import convolutional_layer
 from paccmann_predictor.utils.utils import get_device
+
 from toxsmi.utils.hyperparams import LOSS_FN_FACTORY
 
 
 class CNN(nn.Module):
-    """ This is a simple model for stacked convolutions on SMILES """
+    """This is a simple model for stacked convolutions on SMILES"""
 
     def __init__(self, params, *args, **kwargs):
         """Constructor.
@@ -19,7 +19,7 @@ class CNN(nn.Module):
                 TODO params should become actual arguments (use **params).
         Items in params:
             filters (list[int], optional): Numbers of filters to learn per
-                convolutional layer. 
+                convolutional layer.
             kernel_sizes (list[list[int]], optional): Sizes of kernels per
                 convolutional layer. Defaults to  [
                     [3, params['smiles_embedding_size']],
@@ -41,45 +41,45 @@ class CNN(nn.Module):
         # Model Parameter
         self.device = get_device()
         self.params = params
-        self.loss_fn = LOSS_FN_FACTORY[params.get('loss_fn', 'cnn')]
+        self.loss_fn = LOSS_FN_FACTORY[params.get("loss_fn", "cnn")]
 
         self.kernel_sizes = params.get(
-            'kernel_sizes', [
-                [3, params['smiles_embedding_size']],
-                [5, params['smiles_embedding_size']],
-                [11, params['smiles_embedding_size']]
-            ]
+            "kernel_sizes",
+            [
+                [3, params["smiles_embedding_size"]],
+                [5, params["smiles_embedding_size"]],
+                [11, params["smiles_embedding_size"]],
+            ],
         )
 
-        self.num_filters = [1] + params.get('num_filters', [10, 20, 50])
+        self.num_filters = [1] + params.get("num_filters", [10, 20, 50])
 
         if len(self.filters) != len(self.kernel_sizes):
-            raise ValueError(
-                'Length of filter and kernel size lists do not match.'
-            )
+            raise ValueError("Length of filter and kernel size lists do not match.")
 
         self.smiles_embedding = nn.Embedding(
-            self.params['smiles_vocabulary_size'],
-            self.params['smiles_embedding_size'],
-            scale_grad_by_freq=params.get('embed_scale_grad', False)
+            self.params["smiles_vocabulary_size"],
+            self.params["smiles_embedding_size"],
+            scale_grad_by_freq=params.get("embed_scale_grad", False),
         )
 
-        self.dropout = params.get('dropout', 0.0)
-        self.act_fn = ACTIVATION_FN_FACTORY[
-            params.get('activation_fn', 'relu')]
+        self.dropout = params.get("dropout", 0.0)
+        self.act_fn = ACTIVATION_FN_FACTORY[params.get("activation_fn", "relu")]
 
         self.conv_layers = [
             convolutional_layer(
-                self.num_filters[layer], self.num_filters[layer + 1],
-                self.kernel_sizes[layer]
-            ) for layer in range(len(self.channel_inputs) - 1)
+                self.num_filters[layer],
+                self.num_filters[layer + 1],
+                self.kernel_sizes[layer],
+            )
+            for layer in range(len(self.channel_inputs) - 1)
         ]
 
         self.final_dense = nn.Linear(
-            (self.num_filters[-1] * self.params['smiles_embedding_size']),
-            self.num_tasks
+            (self.num_filters[-1] * self.params["smiles_embedding_size"]),
+            self.num_tasks,
         )
-        self.final_act_fn = ACTIVATION_FN_FACTORY['sigmoid']
+        self.final_act_fn = ACTIVATION_FN_FACTORY["sigmoid"]
 
     def forward(self, x):
         """Forward pass through the cnn model.
@@ -96,7 +96,7 @@ class CNN(nn.Module):
             inputs = conv_layer(inputs, self.act_fn)
 
         predictions = self.final_act_fn(self.final_dense(inputs))
-        prediction_dict = {'Toxicity scores': predictions}
+        prediction_dict = {"Toxicity scores": predictions}
         return predictions, prediction_dict
 
     def loss(self, yhat, y):

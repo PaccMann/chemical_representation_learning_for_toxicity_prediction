@@ -120,6 +120,7 @@ ENV/
 
 # trained models
 /models
+/models*
 
 # VS code
 .vscode
@@ -129,3 +130,14 @@ ENV/
 
 # CSV files:
 *.csv
+
+# pickle files
+*.pkl
+
+# Cluster outputs
+slurm*
+
+# smiles files
+*.smi
+
+bace

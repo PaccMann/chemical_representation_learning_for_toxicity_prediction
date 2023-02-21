@@ -8,4 +8,4 @@ def disable_rdkit_logging():
     """
     logger = rkl.logger()
     logger.setLevel(rkl.ERROR)
-    rkrb.DisableLog('rdApp.error')
+    rkrb.DisableLog("rdApp.error")

@@ -6,9 +6,13 @@ import torch
 import torch.nn as nn
 from paccmann_predictor.utils.hyperparams import ACTIVATION_FN_FACTORY
 from paccmann_predictor.utils.layers import (
-    alpha_projection, convolutional_layer, dense_layer, smiles_projection
+    alpha_projection,
+    convolutional_layer,
+    dense_layer,
+    smiles_projection,
 )
 from paccmann_predictor.utils.utils import get_device
+
 from toxsmi.utils.hyperparams import LOSS_FN_FACTORY
 from toxsmi.utils.layers import EnsembleLayer
 
@@ -72,122 +76,115 @@ class MCAMultiTask(nn.Module):
             "stacked_dense_hidden_sizes": [1024, 512]
         }
         ```
-    """
+        """
         super(MCAMultiTask, self).__init__(*args, **kwargs)
 
         # Model Parameter
         self.device = get_device()
         self.params = params
-        self.num_tasks = params.get('num_tasks', 12)
-        self.smiles_attention_size = params.get('smiles_attention_size', 64)
+        self.num_tasks = params.get("num_tasks", 12)
+        self.smiles_attention_size = params.get("smiles_attention_size", 64)
 
         # Model architecture (hyperparameter)
-        self.multiheads = params.get('multiheads', [4, 4, 4, 4])
-        self.filters = params.get('filters', [64, 64, 64])
-        self.hidden_sizes = (
-            [
-                self.multiheads[0] * params['smiles_embedding_size'] + sum(
-                    [h * f for h, f in zip(self.multiheads[1:], self.filters)]
-                )
-            ] + params.get('stacked_hidden_sizes', [1024, 512])
-        )
+        self.multiheads = params.get("multiheads", [4, 4, 4, 4])
+        self.filters = params.get("filters", [64, 64, 64])
 
-        self.dropout = params.get('dropout', 0.5)
-        self.use_batch_norm = self.params.get('batch_norm', True)
-        self.act_fn = ACTIVATION_FN_FACTORY[
-            params.get('activation_fn', 'relu')]
-        self.kernel_sizes = params.get(
-            'kernel_sizes', [
-                [3, params['smiles_embedding_size']],
-                [5, params['smiles_embedding_size']],
-                [11, params['smiles_embedding_size']]
-            ]
-        )
-        if len(self.filters) != len(self.kernel_sizes):
-            raise ValueError(
-                'Length of filter and kernel size lists do not match.'
-            )
-        if len(self.filters) + 1 != len(self.multiheads):
-            raise ValueError(
-                'Length of filter and multihead lists do not match'
-            )
+        self.dropout = params.get("dropout", 0.5)
+        self.use_batch_norm = self.params.get("batch_norm", True)
+        self.act_fn = ACTIVATION_FN_FACTORY[params.get("activation_fn", "relu")]
 
         # Build the model. First the embeddings
-        if params.get('embedding', 'learned') == 'learned':
+        if params.get("embedding", "learned") == "learned":
 
             self.smiles_embedding = nn.Embedding(
-                self.params['smiles_vocabulary_size'],
-                self.params['smiles_embedding_size'],
-                scale_grad_by_freq=params.get('embed_scale_grad', False)
+                self.params["smiles_vocabulary_size"],
+                self.params["smiles_embedding_size"],
+                scale_grad_by_freq=params.get("embed_scale_grad", False),
             )
-        elif params.get('embedding', 'learned') == 'one_hot':
+        elif params.get("embedding", "learned") == "one_hot":
             self.smiles_embedding = nn.Embedding(
-                self.params['smiles_vocabulary_size'],
-                self.params['smiles_vocabulary_size']
+                self.params["smiles_vocabulary_size"],
+                self.params["smiles_vocabulary_size"],
             )
             # Plug in one hot-vectors and freeze weights
             self.smiles_embedding.load_state_dict(
                 {
-                    'weight':
-                        torch.nn.functional.one_hot(
-                            torch.arange(
-                                self.params['smiles_vocabulary_size']
-                            )
-                        )
+                    "weight": torch.nn.functional.one_hot(
+                        torch.arange(self.params["smiles_vocabulary_size"])
+                    )
                 }
             )
             self.smiles_embedding.weight.requires_grad = False
 
-        elif params.get('embedding', 'learned') == 'pretrained':
+        elif params.get("embedding", "learned") == "pretrained":
             # Load the pretrained embeddings
             try:
-                with open(params['embedding_path'], 'rb') as f:
+                with open(params["embedding_path"], "rb") as f:
                     embeddings = pickle.load(f)
             except KeyError:
-                raise KeyError('Path for embeddings is missing in params.')
+                raise KeyError("Path for embeddings is missing in params.")
 
             # Plug into layer
             self.smiles_embedding = nn.Embedding(
                 embeddings.shape[0], embeddings.shape[1]
             )
-            self.smiles_embedding.load_state_dict(
-                {'weight': torch.Tensor(embeddings)}
-            )
-            if params.get('fix_embeddings', True):
+            self.smiles_embedding.load_state_dict({"weight": torch.Tensor(embeddings)})
+            if params.get("fix_embeddings", True):
                 self.smiles_embedding.weight.requires_grad = False
 
         else:
             raise ValueError(f"Unknown embedding type: {params['embedding']}")
 
+        self.kernel_sizes = params.get(
+            "kernel_sizes",
+            [
+                [3, self.smiles_embedding.weight.shape[1]],
+                [5, self.smiles_embedding.weight.shape[1]],
+                [11, self.smiles_embedding.weight.shape[1]],
+            ],
+        )
+
+        self.hidden_sizes = [
+            self.multiheads[0] * self.smiles_embedding.weight.shape[1]
+            + sum([h * f for h, f in zip(self.multiheads[1:], self.filters)])
+        ] + params.get("stacked_hidden_sizes", [1024, 512])
+
+        if len(self.filters) != len(self.kernel_sizes):
+            raise ValueError("Length of filter and kernel size lists do not match.")
+        if len(self.filters) + 1 != len(self.multiheads):
+            raise ValueError("Length of filter and multihead lists do not match")
+
         self.convolutional_layers = nn.Sequential(
             OrderedDict(
                 [
                     (
-                        f'convolutional_{index}',
+                        f"convolutional_{index}",
                         convolutional_layer(
                             num_kernel,
                             kernel_size,
                             act_fn=self.act_fn,
                             dropout=self.dropout,
-                            batch_norm=self.use_batch_norm
-                        ).to(self.device)
-                    ) for index, (num_kernel, kernel_size) in
-                    enumerate(zip(self.filters, self.kernel_sizes))
+                            batch_norm=self.use_batch_norm,
+                        ).to(self.device),
+                    )
+                    for index, (num_kernel, kernel_size) in enumerate(
+                        zip(self.filters, self.kernel_sizes)
+                    )
                 ]
             )
         )
 
-        smiles_hidden_sizes = [params['smiles_embedding_size']] + self.filters
+        smiles_hidden_sizes = [self.smiles_embedding.weight.shape[1]] + self.filters
         self.smiles_projections = nn.Sequential(
             OrderedDict(
                 [
                     (
-                        f'smiles_projection_{self.multiheads[0]*layer+index}',
+                        f"smiles_projection_{self.multiheads[0]*layer+index}",
                         smiles_projection(
-                            smiles_hidden_sizes[layer],
-                            self.smiles_attention_size
-                        )
-                    ) for layer in range(len(self.multiheads))
+                            smiles_hidden_sizes[layer], self.smiles_attention_size
+                        ),
+                    )
+                    for layer in range(len(self.multiheads))
                     for index in range(self.multiheads[layer])
                 ]
             )
@@ -196,9 +193,10 @@ class MCAMultiTask(nn.Module):
             OrderedDict(
                 [
                     (
-                        f'alpha_projection_{self.multiheads[0]*layer+index}',
-                        alpha_projection(self.smiles_attention_size)
-                    ) for layer in range(len(self.multiheads))
+                        f"alpha_projection_{self.multiheads[0]*layer+index}",
+                        alpha_projection(self.smiles_attention_size),
+                    )
+                    for layer in range(len(self.multiheads))
                     for index in range(self.multiheads[layer])
                 ]
             )
@@ -211,42 +209,43 @@ class MCAMultiTask(nn.Module):
             OrderedDict(
                 [
                     (
-                        'dense_{}'.format(ind),
+                        "dense_{}".format(ind),
                         dense_layer(
                             self.hidden_sizes[ind],
                             self.hidden_sizes[ind + 1],
                             act_fn=self.act_fn,
                             dropout=self.dropout,
-                            batch_norm=self.use_batch_norm
-                        ).to(self.device)
-                    ) for ind in range(len(self.hidden_sizes) - 1)
+                            batch_norm=self.use_batch_norm,
+                        ).to(self.device),
+                    )
+                    for ind in range(len(self.hidden_sizes) - 1)
                 ]
             )
         )
 
-        if params.get('ensemble', 'None') not in ['score', 'prob', 'None']:
+        if params.get("ensemble", "None") not in ["score", "prob", "None"]:
             raise NotImplementedError(
                 "Choose ensemble type from ['score', 'prob', 'None']"
             )
-        if params.get('ensemble', 'None') == 'None':
-            params['ensemble_size'] = 1
+        if params.get("ensemble", "None") == "None":
+            params["ensemble_size"] = 1
 
         self.final_dense = EnsembleLayer(
-            typ=params.get('ensemble', 'score'),
+            typ=params.get("ensemble", "score"),
             input_size=self.hidden_sizes[-1],
             output_size=self.num_tasks,
-            ensemble_size=params.get('ensemble_size', 5),
-            fn=ACTIVATION_FN_FACTORY['sigmoid']
+            ensemble_size=params.get("ensemble_size", 5),
+            fn=ACTIVATION_FN_FACTORY["sigmoid"],
         )
 
         self.loss_fn = LOSS_FN_FACTORY[
-            params.get('loss_fn', 'binary_cross_entropy_ignore_nan_and_sum')
-        ]   # yapf: disable
+            params.get("loss_fn", "binary_cross_entropy_ignore_nan_and_sum")
+        ]  # yapf: disable
         # Set class weights manually
-        if 'binary_cross_entropy_ignore_nan' in params.get(
-            'loss_fn', 'binary_cross_entropy_ignore_nan_and_sum'
+        if "binary_cross_entropy_ignore_nan" in params.get(
+            "loss_fn", "binary_cross_entropy_ignore_nan_and_sum"
         ):
-            self.loss_fn.class_weights = params.get('class_weights', [1, 1])
+            self.loss_fn.class_weights = params.get("class_weights", [1, 1])
 
     def forward(self, smiles: torch.Tensor) -> Tuple[torch.Tensor, dict]:
         """Forward pass through the MCA.
@@ -265,8 +264,9 @@ class MCAMultiTask(nn.Module):
 
         # SMILES Convolutions. Unsqueeze has shape batch_size x 1 x T x H.
         encoded_smiles = [embedded_smiles] + [
-            self.convolutional_layers[ind]
-            (torch.unsqueeze(embedded_smiles, 1)).permute(0, 2, 1)
+            self.convolutional_layers[ind](torch.unsqueeze(embedded_smiles, 1)).permute(
+                0, 2, 1
+            )
             for ind in range(len(self.convolutional_layers))
         ]
 
@@ -284,8 +284,8 @@ class MCAMultiTask(nn.Module):
                 # Sequence is always reduced.
                 encodings.append(
                     torch.sum(
-                        encoded_smiles[layer] *
-                        torch.unsqueeze(smiles_alphas[-1], -1), 1
+                        encoded_smiles[layer] * torch.unsqueeze(smiles_alphas[-1], -1),
+                        1,
                     )
                 )
         encodings = torch.cat(encodings, dim=1)
@@ -298,8 +298,9 @@ class MCAMultiTask(nn.Module):
 
         predictions = self.final_dense(encodings)
         prediction_dict = {
-            'smiles_attention': smiles_alphas,
-            'toxicities': predictions,
+            "smiles_attention": smiles_alphas,
+            "toxicities": predictions,
+            "encodings": encodings,
         }
         return predictions, prediction_dict
 
