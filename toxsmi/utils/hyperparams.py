@@ -1,4 +1,5 @@
-from paccmann_predictor.utils.hyperparams import LOSS_FN_FACTORY
+import torch.nn as nn
+from paccmann_predictor.utils.hyperparams import ACTIVATION_FN_FACTORY, LOSS_FN_FACTORY
 
 from .wrappers import BCEIgnoreNaN, GenericIgnoreNaN
 
@@ -12,3 +13,6 @@ LOSS_FN_FACTORY.update(
         "l1_ignore_nan_and_sum": GenericIgnoreNaN(loss="l1", reduction="sum"),
     }
 )
+
+
+ACTIVATION_FN_FACTORY.update({"none": nn.Identity()})
