@@ -38,14 +38,14 @@ class PerformanceLogger:
             self.task_final_report = self.final_report_binary_classification
         elif task == "regression":
             self.report = self.performence_report_regression
-            self.metric_initializer("rmse", 10**9)
-            self.metric_initializer("mae", 10**9)
+            self.metric_initializer("rmse", 10 ** 9)
+            self.metric_initializer("mae", 10 ** 9)
             self.metric_initializer("pearson", -1)
             self.metric_initializer("spearman", -1)
             self.task_final_report = self.final_report_regression
         else:
             raise ValueError(f"Unknown task {task}")
-        self.metric_initializer("loss", 10**9)
+        self.metric_initializer("loss", 10 ** 9)
 
         self.task = task
         self.model_path = model_path
@@ -155,7 +155,7 @@ class PerformanceLogger:
             best = "Loss"
         return best
 
-    def save_model(self, model: Callable, metric: str, typ: str, value: float):
+    def save_model(self, model: Callable, metric: str, typ: str, value: float = -1.0):
         model.save(self.weights_path.format(typ, metric))
         if typ == "best":
             logger.info(
