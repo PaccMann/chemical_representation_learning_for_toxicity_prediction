@@ -87,6 +87,7 @@ class PerformanceLogger:
         }
         self.metrics.append(info)
         self.preds = preds
+        self.labels = labels
         if roc_auc > self.roc_auc:
             self.roc_auc = roc_auc
             self.save_model(model, "ROC-AUC", "best", value=roc_auc)
