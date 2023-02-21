@@ -6,9 +6,14 @@ from typing import Callable
 import numpy as np
 import pandas as pd
 from scipy.stats import pearsonr, spearmanr
-from sklearn.metrics import (auc, average_precision_score, mean_absolute_error,
-                             mean_squared_error, precision_recall_curve,
-                             roc_curve)
+from sklearn.metrics import (
+    auc,
+    average_precision_score,
+    mean_absolute_error,
+    mean_squared_error,
+    precision_recall_curve,
+    roc_curve,
+)
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 logger = logging.getLogger("performance_logger")
@@ -82,12 +87,12 @@ class PerformanceLogger:
         }
         self.metrics.append(info)
         self.preds = preds
-        if roc_auc > self.max_roc_auc:
-            self.max_roc_auc = roc_auc
+        if roc_auc > self.roc_auc:
+            self.roc_auc = roc_auc
             self.save_model(model, "ROC-AUC", "best", value=roc_auc)
             best = "ROC-AUC"
-        if precision_recall > self.max_precision_recall:
-            self.max_precision_recall = precision_recall
+        if precision_recall > self.precision_recall:
+            self.precision_recall = precision_recall
             self.save_model(model, "Precision-Recall", "best", value=precision_recall)
             best = "Precision-Recall"
         if loss_a < self.loss:
