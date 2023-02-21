@@ -234,7 +234,7 @@ class MCAMultiTask(nn.Module):
         )
         final_activation = (
             ACTIVATION_FN_FACTORY["sigmoid"]
-            if "cross" in self.loss
+            if "cross" in self.loss_name
             else ACTIVATION_FN_FACTORY["none"]
         )
         self.final_dense = EnsembleLayer(
