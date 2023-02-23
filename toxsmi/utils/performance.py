@@ -1,7 +1,7 @@
 import json
 import logging
 import os
-from typing import Callable
+from typing import Callable, List
 
 import numpy as np
 import pandas as pd
@@ -28,6 +28,7 @@ class PerformanceLogger:
         epochs: int,
         train_batches: int,
         test_batches: int,
+        task_names: List[str],
     ):
 
         if task == "binary_classification":
@@ -48,6 +49,7 @@ class PerformanceLogger:
         self.metric_initializer("loss", 10**9)
 
         self.task = task
+        self.task_names = task_names
         self.model_path = model_path
         self.weights_path = os.path.join(model_path, "weights/{}_{}.pt")
         self.epoch = 0
@@ -62,6 +64,18 @@ class PerformanceLogger:
     def performance_report_binary_classification(
         self, labels: np.array, preds: np.array, loss: float, model: Callable
     ):
+        # Register full arrays
+        self.labels = labels
+        self.preds = preds
+
+        # From here, everything will be 1D
+        labels = labels.flatten()
+        preds = preds.flatten()
+
+        # Remove NaNs from labels and predictions to compute scores
+        preds = preds[~np.isnan(labels)]
+        labels = labels[~np.isnan(labels)]
+
         best = ""
         loss_a = loss / self.test_batches
         fpr, tpr, _ = roc_curve(labels, preds)
@@ -86,15 +100,13 @@ class PerformanceLogger:
             "best_precision_recall": self.precision_recall,
         }
         self.metrics.append(info)
-        self.preds = preds
-        self.labels = labels
         if roc_auc > self.roc_auc:
             self.roc_auc = roc_auc
             self.save_model(model, "ROC-AUC", "best", value=roc_auc)
             best = "ROC-AUC"
         if precision_recall > self.precision_recall:
             self.precision_recall = precision_recall
-            self.save_model(model, "Precision-Recall", "best", value=precision_recall)
+            # self.save_model(model, "Precision-Recall", "best", value=precision_recall)
             best = "Precision-Recall"
         if loss_a < self.loss:
             self.loss = loss_a
@@ -105,6 +117,18 @@ class PerformanceLogger:
     def performance_report_regression(
         self, labels: np.array, preds: np.array, loss: float, model: Callable
     ):
+        # Register full arrays
+        self.labels = labels
+        self.preds = preds
+
+        # From here, everything will be 1D
+        labels = labels.flatten()
+        preds = preds.flatten()
+
+        # Remove NaNs from labels and predictions to compute scores
+        preds = preds[~np.isnan(labels)]
+        labels = labels[~np.isnan(labels)]
+
         best = ""
         loss_a = loss / self.test_batches
 
@@ -131,15 +155,13 @@ class PerformanceLogger:
             "best_spearman": self.spearman,
         }
         self.metrics.append(info)
-        self.preds = preds
-        self.labels = labels
         if rmse < self.rmse:
             self.rmse = rmse
             self.save_model(model, "RMSE", "best", value=rmse)
             best = "RMSE"
         if mae < self.mae:
             self.mae = mae
-            self.save_model(model, "MAE", "best", value=mae)
+            # self.save_model(model, "MAE", "best", value=mae)
             best = "MAE"
         if pearson > self.pearson:
             self.pearson = pearson
@@ -147,7 +169,7 @@ class PerformanceLogger:
             best = "Pearson"
         if spearman > self.spearman:
             self.spearman = spearman
-            self.save_model(model, "Spearman", "best", value=spearman)
+            # self.save_model(model, "Spearman", "best", value=spearman)
             best = "Spearman"
         if loss_a < self.loss:
             self.loss = loss_a
@@ -162,10 +184,13 @@ class PerformanceLogger:
                 f"\t New best performance in {metric}"
                 f" with value : {value:.7f} in epoch: {self.epoch}"
             )
-            pd.DataFrame({"predictions": self.preds, "labels": self.labels}).to_csv(
+            pd.DataFrame(self.preds, columns=self.task_names).to_csv(
                 os.path.join(
                     self.model_path, "results", f"{metric}_best_predictions.csv"
                 )
+            )
+            pd.DataFrame(self.labels, columns=self.task_names).to_csv(
+                os.path.join(self.model_path, "results", "labels.csv")
             )
             with open(
                 os.path.join(self.model_path, "results", f"{metric}_best_metrics.json"),
