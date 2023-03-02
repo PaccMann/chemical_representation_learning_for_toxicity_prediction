@@ -1,14 +1,18 @@
 import json
 import logging
 import os
-from typing import Callable, List
+from typing import Callable, Dict, List
 
 import numpy as np
 import pandas as pd
 from scipy.stats import pearsonr, spearmanr
 from sklearn.metrics import (
+    accuracy_score,
     auc,
     average_precision_score,
+    balanced_accuracy_score,
+    classification_report,
+    f1_score,
     mean_absolute_error,
     mean_squared_error,
     precision_recall_curve,
@@ -18,6 +22,29 @@ from sklearn.metrics import (
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 logger = logging.getLogger("performance_logger")
 logger.setLevel(logging.INFO)
+
+
+def binarize_predictions(
+    predictions: np.array, labels: np.array, return_thresh: bool = False
+):
+    """
+    Binarizes predictions based on Youden's index.
+
+    Args:
+        predictions: A 1D np.array with continuous predictions.
+        labels: A 1D np.array with discrete labels.
+        return_thresh: Whether the threshold is returned.
+
+    Returns:
+        A 1D np.array with binarized predictions.
+    """
+    fpr, tpr, thresholds = roc_curve(labels, predictions)
+    thresh = thresholds[np.argmax(tpr - fpr)]
+    bin_preds = predictions > thresh
+    if return_thresh:
+        return bin_preds, thresh
+    else:
+        return bin_preds
 
 
 class PerformanceLogger:
@@ -33,20 +60,22 @@ class PerformanceLogger:
 
         if task == "binary_classification":
             self.report = self.performance_report_binary_classification
+            self.inference_report = self.inference_report_binary_classification
             self.metric_initializer("roc_auc", 0)
             self.metric_initializer("accuracy", 0)
             self.metric_initializer("precision_recall", 0)
             self.task_final_report = self.final_report_binary_classification
         elif task == "regression":
             self.report = self.performance_report_regression
-            self.metric_initializer("rmse", 10**9)
-            self.metric_initializer("mae", 10**9)
+            self.inference_report = self.inference_report_regression
+            self.metric_initializer("rmse", 10 ** 9)
+            self.metric_initializer("mae", 10 ** 9)
             self.metric_initializer("pearson", -1)
             self.metric_initializer("spearman", -1)
             self.task_final_report = self.final_report_regression
         else:
             raise ValueError(f"Unknown task {task}")
-        self.metric_initializer("loss", 10**9)
+        self.metric_initializer("loss", 10 ** 9)
 
         self.task = task
         self.task_names = task_names
@@ -61,9 +90,7 @@ class PerformanceLogger:
     def metric_initializer(self, metric: str, value: float):
         setattr(self, metric, value)
 
-    def performance_report_binary_classification(
-        self, labels: np.array, preds: np.array, loss: float, model: Callable
-    ):
+    def process_data(self, labels: np.array, preds: np.array):
         # Register full arrays
         self.labels = labels
         self.preds = preds
@@ -75,6 +102,13 @@ class PerformanceLogger:
         # Remove NaNs from labels and predictions to compute scores
         preds = preds[~np.isnan(labels)]
         labels = labels[~np.isnan(labels)]
+
+        return labels, preds
+
+    def performance_report_binary_classification(
+        self, labels: np.array, preds: np.array, loss: float, model: Callable
+    ):
+        labels, preds = self.process_data(labels, preds)
 
         best = ""
         loss_a = loss / self.test_batches
@@ -117,17 +151,7 @@ class PerformanceLogger:
     def performance_report_regression(
         self, labels: np.array, preds: np.array, loss: float, model: Callable
     ):
-        # Register full arrays
-        self.labels = labels
-        self.preds = preds
-
-        # From here, everything will be 1D
-        labels = labels.flatten()
-        preds = preds.flatten()
-
-        # Remove NaNs from labels and predictions to compute scores
-        preds = preds[~np.isnan(labels)]
-        labels = labels[~np.isnan(labels)]
+        labels, preds = self.process_data(labels, preds)
 
         best = ""
         loss_a = loss / self.test_batches
@@ -176,6 +200,58 @@ class PerformanceLogger:
             self.save_model(model, "loss", "best", value=loss_a)
             best = "Loss"
         return best
+
+    def inference_report_binary_classification(
+        self,
+        labels: np.array,
+        preds: np.array,
+    ):
+        labels, preds = self.process_data(labels, preds)
+
+        fpr, tpr, _ = roc_curve(labels, preds)
+        roc_auc = auc(fpr, tpr)
+        bin_preds, thresh = binarize_predictions(preds, labels, return_thresh=True)
+        precision, recall, _ = precision_recall_curve(labels, preds)
+        precision_recall = average_precision_score(labels, preds)
+        report = classification_report(labels, bin_preds, output_dict=True)
+        precision = report["1"]["precision"]
+        recall = report["1"]["recall"]
+        accuracy = accuracy_score(labels, bin_preds)
+        bal_accuracy = balanced_accuracy_score(labels, bin_preds)
+        f1 = f1_score(labels, bin_preds)
+
+        info = {
+            "roc_auc": roc_auc,
+            "f1": f1,
+            "threshold": thresh,
+            "precision": precision,
+            "recall": recall,
+            "accuracy": accuracy,
+            "balanced_accuracy": bal_accuracy,
+            "precision_recall_score": precision_recall,
+        }
+        self.log_dictioanry(info)
+
+        return info
+
+    @staticmethod
+    def log_dictionary(info: Dict[str, float]):
+        logger.info("\t **** TEST ****\n")
+        for k, v in info.items():
+            logger.info(f"{k}: {v:.5f}")
+        logger.info("\n")
+
+    def inference_report_regression(self, labels: np.array, preds: np.array):
+        labels, preds = self.process_data(labels, preds)
+
+        pearson = float(pearsonr(labels, preds)[0])
+        spearman = float(spearmanr(labels, preds)[0])
+        rmse = float(np.sqrt(mean_squared_error(labels, preds)))
+        mae = float(mean_absolute_error(labels, preds))
+        info = {"rmse": rmse, "mae": mae, "pearson": pearson, "spearman": spearman}
+        self.log_dictioanry(info)
+
+        return info
 
     def save_model(self, model: Callable, metric: str, typ: str, value: float = -1.0):
         model.save(self.weights_path.format(typ, metric))
