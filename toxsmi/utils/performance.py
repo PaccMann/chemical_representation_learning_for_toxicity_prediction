@@ -25,7 +25,7 @@ logger.setLevel(logging.INFO)
 
 
 def binarize_predictions(
-    predictions: np.array, labels: np.array, return_thresh: bool = False
+    predictions: np.array, labels: np.array, return_youden: bool = False
 ):
     """
     Binarizes predictions based on Youden's index.
@@ -33,16 +33,16 @@ def binarize_predictions(
     Args:
         predictions: A 1D np.array with continuous predictions.
         labels: A 1D np.array with discrete labels.
-        return_thresh: Whether the threshold is returned.
+        return_youden: Whether the threshold is returned.
 
     Returns:
         A 1D np.array with binarized predictions.
     """
     fpr, tpr, thresholds = roc_curve(labels, predictions)
-    thresh = thresholds[np.argmax(tpr - fpr)]
-    bin_preds = predictions > thresh
-    if return_thresh:
-        return bin_preds, thresh
+    youden_thresh = thresholds[np.argmax(tpr - fpr)]
+    bin_preds = predictions > youden_thresh
+    if return_youden:
+        return bin_preds, youden_thresh
     else:
         return bin_preds
 
@@ -68,14 +68,14 @@ class PerformanceLogger:
         elif task == "regression":
             self.report = self.performance_report_regression
             self.inference_report = self.inference_report_regression
-            self.metric_initializer("rmse", 10 ** 9)
-            self.metric_initializer("mae", 10 ** 9)
+            self.metric_initializer("rmse", 10**9)
+            self.metric_initializer("mae", 10**9)
             self.metric_initializer("pearson", -1)
             self.metric_initializer("spearman", -1)
             self.task_final_report = self.final_report_regression
         else:
             raise ValueError(f"Unknown task {task}")
-        self.metric_initializer("loss", 10 ** 9)
+        self.metric_initializer("loss", 10**9)
 
         self.task = task
         self.task_names = task_names
@@ -210,7 +210,7 @@ class PerformanceLogger:
 
         fpr, tpr, _ = roc_curve(labels, preds)
         roc_auc = auc(fpr, tpr)
-        bin_preds, thresh = binarize_predictions(preds, labels, return_thresh=True)
+        bin_preds, youden = binarize_predictions(preds, labels, return_youden=True)
         precision, recall, _ = precision_recall_curve(labels, preds)
         precision_recall = average_precision_score(labels, preds)
         report = classification_report(labels, bin_preds, output_dict=True)
@@ -223,14 +223,14 @@ class PerformanceLogger:
         info = {
             "roc_auc": roc_auc,
             "f1": f1,
-            "threshold": thresh,
+            "youden_threshold": youden,
             "precision": precision,
             "recall": recall,
             "accuracy": accuracy,
             "balanced_accuracy": bal_accuracy,
             "precision_recall_score": precision_recall,
         }
-        self.log_dictioanry(info)
+        self.log_dictionary(info)
 
         return info
 
@@ -249,7 +249,7 @@ class PerformanceLogger:
         rmse = float(np.sqrt(mean_squared_error(labels, preds)))
         mae = float(mean_absolute_error(labels, preds))
         info = {"rmse": rmse, "mae": mae, "pearson": pearson, "spearman": spearman}
-        self.log_dictioanry(info)
+        self.log_dictionary(info)
 
         return info
 
