@@ -68,14 +68,14 @@ class PerformanceLogger:
         elif task == "regression":
             self.report = self.performance_report_regression
             self.inference_report = self.inference_report_regression
-            self.metric_initializer("rmse", 10**9)
-            self.metric_initializer("mae", 10**9)
+            self.metric_initializer("rmse", 10 ** 9)
+            self.metric_initializer("mae", 10 ** 9)
             self.metric_initializer("pearson", -1)
             self.metric_initializer("spearman", -1)
             self.task_final_report = self.final_report_regression
         else:
             raise ValueError(f"Unknown task {task}")
-        self.metric_initializer("loss", 10**9)
+        self.metric_initializer("loss", 10 ** 9)
 
         self.task = task
         self.task_names = task_names
@@ -207,15 +207,16 @@ class PerformanceLogger:
         preds: np.array,
     ):
         labels, preds = self.process_data(labels, preds)
-
         fpr, tpr, _ = roc_curve(labels, preds)
         roc_auc = auc(fpr, tpr)
         bin_preds, youden = binarize_predictions(preds, labels, return_youden=True)
         precision, recall, _ = precision_recall_curve(labels, preds)
         precision_recall = average_precision_score(labels, preds)
         report = classification_report(labels, bin_preds, output_dict=True)
-        precision = report["1"]["precision"]
-        recall = report["1"]["recall"]
+        negative_precision = report["0"]["precision"]
+        negative_recall = report["0"]["recall"]
+        positive_precision = report["1"]["precision"]
+        positive_recall = report["1"]["recall"]
         accuracy = accuracy_score(labels, bin_preds)
         bal_accuracy = balanced_accuracy_score(labels, bin_preds)
         f1 = f1_score(labels, bin_preds)
@@ -224,11 +225,46 @@ class PerformanceLogger:
             "roc_auc": roc_auc,
             "f1": f1,
             "youden_threshold": youden,
-            "precision": precision,
-            "recall": recall,
+            "positive_precision": positive_precision,
+            "positive_recall": positive_recall,
+            "negative_precision": negative_precision,
+            "negative_recall": negative_recall,
             "accuracy": accuracy,
             "balanced_accuracy": bal_accuracy,
             "precision_recall_score": precision_recall,
+        }
+        self.log_dictionary(info)
+
+        return info
+
+    def inference_report_binarized_regression(
+        self, labels: np.array, preds: np.array, threshold: float
+    ):
+        """
+        A regression model trained on a regression task, evaluated in a pseduo-
+        binarized setting, based on a threshold
+        """
+        labels, preds = self.process_data(labels, preds)
+        bin_labels = (labels > threshold).astype(int)
+        bin_preds = (preds > threshold).astype(int)
+        report = classification_report(bin_labels, bin_preds, output_dict=True)
+        negative_precision = report["0"]["precision"]
+        negative_recall = report["0"]["recall"]
+        positive_precision = report["1"]["precision"]
+        positive_recall = report["1"]["recall"]
+        accuracy = accuracy_score(bin_labels, bin_preds)
+        bal_accuracy = balanced_accuracy_score(bin_labels, bin_preds)
+        f1 = f1_score(bin_labels, bin_preds)
+
+        info = {
+            "f1": f1,
+            "fixed_threshold": threshold,
+            "positive_precision": positive_precision,
+            "positive_recall": positive_recall,
+            "negative_precision": negative_precision,
+            "negative_recall": negative_recall,
+            "accuracy": accuracy,
+            "balanced_accuracy": bal_accuracy,
         }
         self.log_dictionary(info)
 
