@@ -248,10 +248,14 @@ class PerformanceLogger:
         bin_labels = (labels > threshold).astype(int)
         bin_preds = (preds > threshold).astype(int)
         report = classification_report(bin_labels, bin_preds, output_dict=True)
-        negative_precision = report["0"]["precision"]
-        negative_recall = report["0"]["recall"]
-        positive_precision = report["1"]["precision"]
-        positive_recall = report["1"]["recall"]
+        # If the positive or negative key is not inside the report it implies that:
+        # 1) All labels were from the same class (positive or negative)
+        # 2) All predicitons were from the same class too
+        # --> In that case, precision and recall for the other class are set to 0
+        negative_precision = report.get("0", {"precision": 0.0})["precision"]
+        negative_recall = report.get("0", {"recall": 0.0})["recall"]
+        positive_precision = report.get("1", {"precision": 0.0})["precision"]
+        positive_recall = report.get("1", {"recall": 0.0})["recall"]
         accuracy = accuracy_score(bin_labels, bin_preds)
         bal_accuracy = balanced_accuracy_score(bin_labels, bin_preds)
         f1 = f1_score(bin_labels, bin_preds)
