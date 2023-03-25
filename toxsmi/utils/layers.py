@@ -1,3 +1,5 @@
+from typing import Callable
+
 import torch
 import torch.nn as nn
 from paccmann_predictor.utils.utils import get_device
@@ -11,15 +13,22 @@ class EnsembleLayer(nn.Module):
     model ensembles.
     """
 
-    def __init__(self, typ, input_size, output_size, ensemble_size=5, fn=nn.ReLU()):
+    def __init__(
+        self,
+        typ: str,
+        input_size: int,
+        output_size: int,
+        ensemble_size: int = 5,
+        fn: Callable = nn.ReLU(),
+    ):
         """
         Args:
-            typ    {str} from {'pron', 'score'} depending on whether the
+            typ: from {'prob', 'score'} depending on whether the
                 ensemble includes the activation function ('prob').
-            input_size  {int} amount of input neurons
-            output_size {int} amount of output neurons (# tasks/classes)
-            ensemble_size {int} amount of parallel ensemble learners
-            act_fn      {int} activation function used
+            input_size: amount of input neurons
+            output_size: amount of output neurons (# tasks/classes)
+            ensemble_size: amount of parallel ensemble learners
+            act_fn: activation function used
 
         """
         super(EnsembleLayer, self).__init__()

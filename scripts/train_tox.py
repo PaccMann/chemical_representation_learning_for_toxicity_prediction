@@ -5,6 +5,7 @@ import json
 import logging
 import os
 import sys
+from copy import deepcopy
 from time import time
 
 import numpy as np
@@ -17,8 +18,8 @@ from paccmann_predictor.utils.interpret import (
     test_time_augmentation,
 )
 from paccmann_predictor.utils.utils import get_device
-from pytoda.datasets import AnnotatedDataset, SMILESDataset
-from pytoda.smiles.smiles_language import SMILESLanguage
+from pytoda.datasets import AnnotatedDataset, SMILESTokenizerDataset
+from pytoda.smiles.smiles_language import SMILESTokenizer
 from pytoda.smiles.transforms import SMILESToMorganFingerprints
 from pytoda.transforms import Compose, ToTensor
 from sklearn.metrics import (
@@ -30,31 +31,42 @@ from sklearn.metrics import (
 
 from toxsmi.models import MODEL_FACTORY
 from toxsmi.utils import disable_rdkit_logging
+from toxsmi.utils.performance import PerformanceLogger
 
 # setup logging
 logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 parser = argparse.ArgumentParser()
 parser.add_argument(
-    "train_scores_filepath",
+    "--train",
+    "-train_scores_filepath",
     type=str,
     help="Path to the training toxicity scores (.csv)",
 )
 parser.add_argument(
-    "test_scores_filepath", type=str, help="Path to the test toxicity scores (.csv)"
+    "--test",
+    "-test_scores_filepath",
+    type=str,
+    help="Path to the test toxicity scores (.csv)",
 )
-parser.add_argument("smi_filepath", type=str, help="Path to the SMILES data (.smi)")
 parser.add_argument(
-    "smiles_language_filepath",
+    "--smi", "-smi_filepath", type=str, help="Path to the SMILES data (.smi)"
+)
+parser.add_argument(
+    "--language",
+    "-smiles_language_filepath",
     type=str,
     help="Path to a pickle object a SMILES language object.",
 )
 parser.add_argument(
-    "model_path", type=str, help="Directory where the model will be stored."
+    "--model", "-model_path", type=str, help="Directory where the model will be stored."
 )
-parser.add_argument("params_filepath", type=str, help="Path to the parameter file.")
-parser.add_argument("training_name", type=str, help="Name for the training.")
 parser.add_argument(
-    "--embedding_path",
+    "--params", "-params_filepath", type=str, help="Path to the parameter file."
+)
+parser.add_argument("--name", "-training_name", type=str, help="Name for the training.")
+parser.add_argument(
+    "--embedding",
+    "-embedding_path",
     type=str,
     default=None,
     help="Optional path to a pickle object of a pretrained embedding.",
@@ -86,6 +98,7 @@ def main(
         params["embedding_path"] = embedding_path
 
     # Create model directory and dump files
+    print(model_path, training_name)
     model_dir = os.path.join(model_path, training_name)
     os.makedirs(os.path.join(model_dir, "weights"), exist_ok=True)
     os.makedirs(os.path.join(model_dir, "results"), exist_ok=True)
@@ -93,10 +106,33 @@ def main(
         json.dump(params, fp, indent=4)
 
     logger.info("Start data preprocessing...")
-    smiles_language = SMILESLanguage.load(smiles_language_filepath)
+    smiles_language = SMILESTokenizer(
+        vocab_file=smiles_language_filepath,  # if None, new language is created
+        padding_length=params.get("padding_length", None),
+        randomize=False,
+        add_start_and_stop=params.get("start_stop_token", True),
+        padding=params.get("padding", True),
+        augment=params.get("augment_smiles", False),
+        canonical=params.get("canonical", False),
+        kekulize=params.get("kekulize", False),
+        all_bonds_explicit=params.get("bonds_explicit", False),
+        all_hs_explicit=params.get("all_hs_explicit", False),
+        remove_bonddir=params.get("remove_bonddir", False),
+        remove_chirality=params.get("remove_chirality", False),
+        selfies=params.get("selfies", False),
+        sanitize=params.get("sanitize", False),
+    )
+    test_smiles_language = deepcopy(smiles_language)
+    test_smiles_language.set_smiles_transforms(
+        augment=False,
+        canonical=params.get(
+            "test_smiles_canonical", params.get("augment_smiles", False)
+        ),
+    )
 
     # Prepare FP processing
     if params.get("model_fn", "mca") == "dense":
+        # NOTE: Might not work out of the box with pytoda >0.1.1
         morgan_transform = Compose(
             [
                 SMILESToMorganFingerprints(
@@ -117,29 +153,13 @@ def main(
             return out
 
     # Assemble datasets
-    smiles_dataset = SMILESDataset(
-        smi_filepath,
-        smiles_language=smiles_language,
-        padding_length=params.get("smiles_padding_length", None),
-        padding=params.get("padd_smiles", True),
-        add_start_and_stop=params.get("add_start_stop_token", True),
-        augment=params.get("augment_smiles", False),
-        canonical=params.get("canonical", False),
-        kekulize=params.get("kekulize", False),
-        all_bonds_explicit=params.get("all_bonds_explicit", False),
-        all_hs_explicit=params.get("all_hs_explicit", False),
-        randomize=params.get("randomize", False),
-        remove_bonddir=params.get("remove_bonddir", False),
-        remove_chirality=params.get("remove_chirality", False),
-        selfies=params.get("selfies", False),
-        sanitize=params.get("sanitize", True),
+    smiles_dataset = SMILESTokenizerDataset(
+        smi_filepath, smiles_language=smiles_language
     )
 
     # include arg label_columns if data file has any unwanted columns (such as index) to be ignored.
     train_dataset = AnnotatedDataset(
-        annotations_filepath=train_scores_filepath,
-        dataset=smiles_dataset,
-        device=get_device(),
+        annotations_filepath=train_scores_filepath, dataset=smiles_dataset
     )
     train_loader = torch.utils.data.DataLoader(
         dataset=train_dataset,
@@ -158,35 +178,24 @@ def main(
     # Generally, if sanitize is True molecules are de-kekulized. Augmentation
     # preserves the "kekulization", so if it is used, test data should be
     # sanitized or canonicalized.
-    smiles_test_dataset = SMILESDataset(
-        smi_filepath,
-        smiles_language=smiles_language,
-        padding_length=params.get("smiles_padding_length", None),
-        padding=params.get("padd_smiles", True),
-        add_start_and_stop=params.get("add_start_stop_token", True),
-        augment=params.get("augment_test_smiles", False),
-        canonical=params.get("test_canonical", False),
-        kekulize=params.get("test_kekulize", False),
-        all_bonds_explicit=params.get("test_all_bonds_explicit", False),
-        all_hs_explicit=params.get("test_all_hs_explicit", False),
-        randomize=False,
-        remove_bonddir=params.get("test_remove_bonddir", False),
-        remove_chirality=params.get("test_remove_chirality", False),
-        selfies=params.get("selfies", False),
-        sanitize=params.get("test_sanitize", False),
+    smiles_test_dataset = SMILESTokenizerDataset(
+        smi_filepath, smiles_language=test_smiles_language
     )
 
-    # Dump eventually modified SMILES Language
-    smiles_language.save(os.path.join(model_dir, "smiles_language.pkl"))
+    logger.info("storing languages")
+    os.makedirs(os.path.join(model_dir, "smiles_language"), exist_ok=True)
+    smiles_language.save_pretrained(os.path.join(model_dir, "smiles_language"))
 
-    logger.info(smiles_dataset._dataset.transform)
-    logger.info(smiles_test_dataset._dataset.transform)
+    logger.info(
+        f"Language: {smiles_language.transform_smiles} and {smiles_language.transform_encoding}"
+    )
+    logger.info(
+        f"Test language: {test_smiles_language.transform_smiles} and {test_smiles_language.transform_encoding}"
+    )
 
     # include arg label_columns if data file has any unwanted columns (such as index) to be ignored.
     test_dataset = AnnotatedDataset(
-        annotations_filepath=test_scores_filepath,
-        dataset=smiles_test_dataset,
-        device=get_device(),
+        annotations_filepath=test_scores_filepath, dataset=smiles_test_dataset
     )
 
     test_loader = torch.utils.data.DataLoader(
@@ -198,26 +207,23 @@ def main(
     )
 
     if params.get("confidence", False):
-        smiles_conf_dataset = SMILESDataset(
-            smi_filepath,
-            smiles_language=smiles_language,
-            padding_length=params.get("smiles_padding_length", None),
-            padding=params.get("padd_smiles", True),
-            add_start_and_stop=params.get("add_start_stop_token", True),
-            augment=True,  # Natively true for epistemic uncertainity estimate
-            canonical=params.get("canonical", False),
+        conf_smiles_language = deepcopy(test_smiles_language)
+        conf_smiles_language.set_smiles_transforms(
+            augment=True,  # natively true
+            canonical=False,
             kekulize=params.get("kekulize", False),
-            all_bonds_explicit=params.get("all_bonds_explicit", False),
+            all_bonds_explicit=params.get("bonds_explicit", False),
             all_hs_explicit=params.get("all_hs_explicit", False),
-            randomize=params.get("randomize", False),
             remove_bonddir=params.get("remove_bonddir", False),
             remove_chirality=params.get("remove_chirality", False),
             selfies=params.get("selfies", False),
+            sanitize=params.get("sanitize", False),
+        )
+        smiles_conf_dataset = SMILESTokenizerDataset(
+            smi_filepath, smiles_language=conf_smiles_language
         )
         conf_dataset = AnnotatedDataset(
-            annotations_filepath=test_scores_filepath,
-            dataset=smiles_conf_dataset,
-            device=get_device(),
+            annotations_filepath=test_scores_filepath, dataset=smiles_conf_dataset
         )
         conf_loader = torch.utils.data.DataLoader(
             dataset=conf_dataset,
@@ -231,11 +237,7 @@ def main(
         params.update({"smiles_vocabulary_size": smiles_language.number_of_tokens})
 
     device = get_device()
-    logger.info(
-        f"Device for data loader is {train_dataset.device} and for "
-        f"model is {device}"
-    )
-    save_top_model = os.path.join(model_dir, "weights/{}_{}_{}.pt")
+    logger.info(f"Device is {device}")
 
     model = MODEL_FACTORY[params.get("model_fn", "mca")](params).to(device)
     logger.info(model)
@@ -260,18 +262,28 @@ def main(
     # Start training
     logger.info("Training about to start...\n")
     t = time()
-    min_loss, max_roc_auc = 1000000, 0
-    max_precision_recall_score = 0
+    save_top_model = os.path.join(model_path, "weights/{}_{}.pt")
+    min_loss = 1000000
+
+    # Set up the performance logger
+    task = "regression" if "cross" not in params["loss_fn"] else "binary_classification"
+    performer = PerformanceLogger(
+        model_path=model_dir,
+        task=task,
+        epochs=params["epochs"],
+        train_batches=len(train_loader),
+        test_batches=len(test_loader),
+    )
 
     for epoch in range(params["epochs"]):
 
+        performer.epoch += 1
         model.train()
         logger.info(params_filepath.split("/")[-1])
         logger.info(f"== Epoch [{epoch}/{params['epochs']}] ==")
         train_loss = 0
 
         for ind, (smiles, y) in enumerate(train_loader):
-
             smiles = torch.squeeze(smiles.to(device))
             # Transform smiles to FP if needed
             if params.get("model_fn", "mca") == "dense":
@@ -320,100 +332,44 @@ def main(
         # Remove NaNs from labels to compute scores
         predictions = predictions[~np.isnan(labels)]
         labels = labels[~np.isnan(labels)]
-        test_loss_a = test_loss / len(test_loader)
-        fpr, tpr, _ = roc_curve(labels, predictions)
-        test_roc_auc_a = auc(fpr, tpr)
 
-        # calculations for visualization plot
-        precision, recall, _ = precision_recall_curve(labels, predictions)
-        # score for precision vs accuracy
-        test_precision_recall_score = average_precision_score(labels, predictions)
+        # performance.update
+        best = performer.report(labels, predictions, test_loss, model)
 
-        logger.info(
-            f"\t **** TEST **** Epoch [{epoch + 1}/{params['epochs']}], "
-            f"loss: {test_loss_a:.5f}, , roc_auc: {test_roc_auc_a:.5f}, "
-            f"avg precision-recall score: {test_precision_recall_score:.5f}"
-        )
-        info = {
-            "test_auc": test_roc_auc_a,
-            "train_loss": train_loss / len(train_loader),
-            "test_loss": test_loss_a,
-            "test_auc": test_roc_auc_a,
-            "best_test_auc": max_roc_auc,
-            "test_precision_recall_score": test_precision_recall_score,
-            "best_precision_recall_score": max_precision_recall_score,
-        }
-
-        def save(path, metric, typ, val=None):
-            model.save(path.format(typ, metric, params.get("model_fn", "mca")))
-            if typ == "best":
-                logger.info(
-                    f"\t New best performance in {metric}"
-                    f" with value : {val:.7f} in epoch: {epoch+1}"
-                )
-
-        if test_roc_auc_a > max_roc_auc:
-            max_roc_auc = test_roc_auc_a
-            info.update({"best_test_auc": max_roc_auc})
-            save(save_top_model, "ROC-AUC", "best", max_roc_auc)
+        if best and params.get("confidence", False):
+            # Compute uncertainity estimates and save them
+            epistemic_conf = monte_carlo_dropout(
+                model, regime="loader", loader=conf_loader
+            )
+            aleatoric_conf = test_time_augmentation(
+                model, regime="loader", loader=conf_loader
+            )
             np.save(
-                os.path.join(model_dir, "results", "best_predictions.npy"), predictions
+                os.path.join(model_dir, "results", f"{best}_epistemic_conf.npy"),
+                epistemic_conf,
             )
-            with open(os.path.join(model_dir, "results", "metrics.json"), "w") as f:
-                json.dump(info, f)
-            if params.get("confidence", False):
-                # Compute uncertainity estimates and save them
-                epistemic_conf = monte_carlo_dropout(
-                    model, regime="loader", loader=conf_loader
-                )
-                aleatoric_conf = test_time_augmentation(
-                    model, regime="loader", loader=conf_loader
-                )
-
-                np.save(
-                    os.path.join(model_dir, "results", "epistemic_conf.npy"),
-                    epistemic_conf,
-                )
-                np.save(
-                    os.path.join(model_dir, "results", "aleatoric_conf.npy"),
-                    aleatoric_conf,
-                )
-
-        if test_precision_recall_score > max_precision_recall_score:
-            max_precision_recall_score = test_precision_recall_score
-            info.update({"best_precision_recall_score": max_precision_recall_score})
-            save(
-                save_top_model,
-                "precision-recall score",
-                "best",
-                max_precision_recall_score,
+            np.save(
+                os.path.join(model_dir, "results", f"{best}_aleatoric_conf.npy"),
+                aleatoric_conf,
             )
-
-        if test_loss_a < min_loss:
-            min_loss = test_loss_a
-            save(save_top_model, "loss", "best", min_loss)
-            ep_loss = epoch
 
         if (epoch + 1) % params.get("save_model", 100) == 0:
-            save(save_top_model, "epoch", str(epoch))
+            performer.save(model, "epoch", str(epoch))
 
-    logger.info(
-        "Overall best performances are: \n \t"
-        f"Loss = {min_loss:.4f} in epoch {ep_loss} "
-    )
-    save(save_top_model, "training", "done")
+    performer.final_report()
+    performer.save(model, "training", "done")
     logger.info("Done with training, models saved, shutting down.")
 
 
 if __name__ == "__main__":
     args = parser.parse_args()
     main(
-        args.train_scores_filepath,
-        args.test_scores_filepath,
-        args.smi_filepath,
-        args.smiles_language_filepath,
-        args.model_path,
-        args.params_filepath,
-        args.training_name,
-        args.embedding_path,
+        args.train,
+        args.test,
+        args.smi,
+        args.language,
+        args.model,
+        args.params,
+        args.name,
+        args.embedding,
     )
