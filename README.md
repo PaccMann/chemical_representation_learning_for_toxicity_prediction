@@ -6,7 +6,7 @@
 # Chemical Representation Learning for Toxicity Prediction
 
 
-PyTorch implementation related to the paper *Chemical Representation Learning for Toxicity Prediction* (Born et al, 2023, Under review at *Digital Discovery*).
+PyTorch implementation related to the paper *Chemical Representation Learning for Toxicity Prediction* ([Born et al, 2023, *Digital Discovery*](https://pubs.rsc.org/en/content/articlehtml/2023/dd/d2dd00099g)).
 ## Training your own model
 
 The library itself has few dependencies (see [setup.py](setup.py)) with loose requirements. 
@@ -58,13 +58,17 @@ In [notebooks/toxicity_attention.ipynb](notebooks/toxicity_attention.ipynb) we s
 
 
 ## Citation
-If you use this code in your projects, please (temporarily) cite the following (full paper in review):
+If you use this code in your projects, please cite the following:
 
 ```bib
 @article{born2023chemical,
-  title={Chemical representation learning for toxicity prediction},
-  author={Born, Jannis and Markert, Greta and Janakarajan, Nikita and Kimber, Talia B. and Volkamer, Andrea and Rodriguez Martinez, Maria and Manica, Matteo},
-  journal={Under review at Digital Discovery},
-  year={2023}
+    author = {Born, Jannis and Markert, Greta and Janakarajan, Nikita and Kimber, Talia B. and Volkamer, Andrea and Martínez, María Rodríguez and Manica, Matteo},
+    title = {Chemical representation learning for toxicity prediction},
+    journal = {Digital Discovery},
+    year = {2023},
+    pages = {-},
+    publisher = {RSC},
+    doi = {10.1039/D2DD00099G},
+    url = {http://dx.doi.org/10.1039/D2DD00099G}
 }
 ```
