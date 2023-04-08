@@ -9,6 +9,8 @@ from copy import deepcopy
 from time import time
 
 import numpy as np
+import pandas as pd
+import pytoda.smiles.metadata as meta
 
 # Ensure Ubuntu/rdkit compatibility
 import torch
@@ -28,7 +30,7 @@ from sklearn.metrics import (
     precision_recall_curve,
     roc_curve,
 )
-
+from torch.utils.data.sampler import WeightedRandomSampler
 from toxsmi.models import MODEL_FACTORY
 from toxsmi.utils import disable_rdkit_logging
 from toxsmi.utils.performance import PerformanceLogger
@@ -52,12 +54,6 @@ parser.add_argument(
     "--smi", "-smi_filepath", type=str, help="Path to the SMILES data (.smi)"
 )
 parser.add_argument(
-    "--language",
-    "-smiles_language_filepath",
-    type=str,
-    help="Path to a pickle object a SMILES language object.",
-)
-parser.add_argument(
     "--model", "-model_path", type=str, help="Directory where the model will be stored."
 )
 parser.add_argument(
@@ -71,17 +67,24 @@ parser.add_argument(
     default=None,
     help="Optional path to a pickle object of a pretrained embedding.",
 )
+parser.add_argument(
+    "--finetune",
+    "-finetune_path",
+    type=str,
+    help="Path to a folder to restore model from.",
+    default="",
+)
 
 
 def main(
-    train_scores_filepath,
-    test_scores_filepath,
-    smi_filepath,
-    smiles_language_filepath,
-    model_path,
-    params_filepath,
-    training_name,
-    embedding_path=None,
+    train_scores_filepath: str,
+    test_scores_filepath: str,
+    smi_filepath: str,
+    model_path: str,
+    params_filepath: str,
+    training_name: str,
+    embedding_path: str,
+    finetune_path: str,
 ):
 
     logging.basicConfig(level=logging.INFO, format="%(message)s")
@@ -105,6 +108,8 @@ def main(
     with open(os.path.join(model_dir, "model_params.json"), "w") as fp:
         json.dump(params, fp, indent=4)
 
+    smiles_language_filepath = os.path.join(os.path.dirname(meta.__file__), "tokenizer")
+
     logger.info("Start data preprocessing...")
     smiles_language = SMILESTokenizer(
         vocab_file=smiles_language_filepath,  # if None, new language is created
@@ -121,13 +126,6 @@ def main(
         remove_chirality=params.get("remove_chirality", False),
         selfies=params.get("selfies", False),
         sanitize=params.get("sanitize", False),
-    )
-    test_smiles_language = deepcopy(smiles_language)
-    test_smiles_language.set_smiles_transforms(
-        augment=False,
-        canonical=params.get(
-            "test_smiles_canonical", params.get("augment_smiles", False)
-        ),
     )
 
     # Prepare FP processing
@@ -156,18 +154,47 @@ def main(
     smiles_dataset = SMILESTokenizerDataset(
         smi_filepath, smiles_language=smiles_language
     )
-
+    test_smiles_language = deepcopy(smiles_language)
+    test_smiles_language.set_smiles_transforms(
+        augment=False,
+        canonical=params.get("test_canonical", params.get("augment_smiles", False)),
+    )
     # include arg label_columns if data file has any unwanted columns (such as index) to be ignored.
+    label_columns = params.get("label_columns", list(range(params["num_tasks"])))
     train_dataset = AnnotatedDataset(
-        annotations_filepath=train_scores_filepath, dataset=smiles_dataset
+        annotations_filepath=train_scores_filepath,
+        dataset=smiles_dataset,
+        label_columns=label_columns,
     )
-    train_loader = torch.utils.data.DataLoader(
-        dataset=train_dataset,
-        batch_size=params["batch_size"],
-        shuffle=True,
-        drop_last=True,
-        num_workers=params.get("num_workers", 0),
-    )
+
+    if params.get("keep_probs"):
+        # Asymetric sampling
+        keep_probs = params.get("keep_probs", (1, 1))
+        freqs = pd.read_csv(train_scores_filepath)["sampling_frequency"]
+        weights = [keep_probs[0] if x == "low" else keep_probs[1] for x in freqs]
+        sampler = WeightedRandomSampler(
+            weights,
+            num_samples=len(train_dataset),
+            replacement=True,
+        )
+        train_loader = torch.utils.data.DataLoader(
+            dataset=train_dataset,
+            batch_size=params["batch_size"],
+            shuffle=False,
+            drop_last=False,
+            num_workers=params.get("num_workers", 0),
+            sampler=sampler,
+        )
+        logger.info(f"Set up biased sampling with frequencies {keep_probs}")
+    else:
+        # Default data loader
+        train_loader = torch.utils.data.DataLoader(
+            dataset=train_dataset,
+            batch_size=params["batch_size"],
+            shuffle=True,
+            drop_last=True,
+            num_workers=params.get("num_workers", 0),
+        )
 
     if params.get("uncertainty", True) and params.get("augment_test_data", False):
         raise ValueError(
@@ -195,7 +222,9 @@ def main(
 
     # include arg label_columns if data file has any unwanted columns (such as index) to be ignored.
     test_dataset = AnnotatedDataset(
-        annotations_filepath=test_scores_filepath, dataset=smiles_test_dataset
+        annotations_filepath=test_scores_filepath,
+        dataset=smiles_test_dataset,
+        label_columns=label_columns,
     )
 
     test_loader = torch.utils.data.DataLoader(
@@ -241,7 +270,6 @@ def main(
 
     model = MODEL_FACTORY[params.get("model_fn", "mca")](params).to(device)
     logger.info(model)
-    logger.info(model.loss_fn.class_weights)
 
     logger.info("Parameters follow")
     for name, param in model.named_parameters():
@@ -250,6 +278,16 @@ def main(
     num_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     params.update({"number_of_parameters": num_params})
     logger.info(f"Number of parameters {num_params}")
+
+    if finetune_path:
+        if os.path.isfile(finetune_path):
+            try:
+                model.load(finetune_path)
+                logger.info(f"Restored pretrained model {finetune_path}")
+            except Exception:
+                raise KeyError(f"Could not restore model from {finetune_path}")
+        else:
+            raise FileNotFoundError(f"Did not find model at {finetune_path}")
 
     # Define optimizer
     optimizer = OPTIMIZER_FACTORY[params.get("optimizer", "adam")](
@@ -262,8 +300,6 @@ def main(
     # Start training
     logger.info("Training about to start...\n")
     t = time()
-    save_top_model = os.path.join(model_path, "weights/{}_{}.pt")
-    min_loss = 1000000
 
     # Set up the performance logger
     task = "regression" if "cross" not in params["loss_fn"] else "binary_classification"
@@ -273,6 +309,7 @@ def main(
         epochs=params["epochs"],
         train_batches=len(train_loader),
         test_batches=len(test_loader),
+        task_names=pd.read_csv(train_scores_filepath).columns[label_columns],
     )
 
     for epoch in range(params["epochs"]):
@@ -326,12 +363,8 @@ def main(
                 loss = model.loss(y_hat, y.to(device))
                 test_loss += loss.item()
 
-        predictions = torch.cat(predictions, dim=0).flatten().cpu().numpy()
-        labels = torch.cat(labels, dim=0).flatten().cpu().numpy()
-
-        # Remove NaNs from labels to compute scores
-        predictions = predictions[~np.isnan(labels)]
-        labels = labels[~np.isnan(labels)]
+        predictions = torch.cat(predictions, dim=0).cpu().numpy()
+        labels = torch.cat(labels, dim=0).cpu().numpy()
 
         # performance.update
         best = performer.report(labels, predictions, test_loss, model)
@@ -354,10 +387,10 @@ def main(
             )
 
         if (epoch + 1) % params.get("save_model", 100) == 0:
-            performer.save(model, "epoch", str(epoch))
+            performer.save_model(model, "epoch", str(epoch))
 
     performer.final_report()
-    performer.save(model, "training", "done")
+    performer.save_model(model, "training", "done")
     logger.info("Done with training, models saved, shutting down.")
 
 
@@ -367,9 +400,9 @@ if __name__ == "__main__":
         args.train,
         args.test,
         args.smi,
-        args.language,
         args.model,
         args.params,
         args.name,
         args.embedding,
+        args.finetune,
     )
