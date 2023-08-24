@@ -94,7 +94,6 @@ class MCAMultiTask(nn.Module):
 
         # Build the model. First the embeddings
         if params.get("embedding", "learned") == "learned":
-
             self.smiles_embedding = nn.Embedding(
                 self.params["smiles_vocabulary_size"],
                 self.params["smiles_embedding_size"],
@@ -252,6 +251,8 @@ class MCAMultiTask(nn.Module):
         ):
             self.loss_fn.class_weights = params.get("class_weights", [1, 1])
 
+        self.to(self.device)
+
     def forward(self, smiles: torch.Tensor) -> Tuple[torch.Tensor, dict]:
         """Forward pass through the MCA.
 
@@ -279,7 +280,6 @@ class MCAMultiTask(nn.Module):
         smiles_alphas, encodings = [], []
         for layer in range(len(self.multiheads)):
             for head in range(self.multiheads[layer]):
-
                 ind = self.multiheads[0] * layer + head
                 smiles_alphas.append(
                     self.alpha_projections[ind](
