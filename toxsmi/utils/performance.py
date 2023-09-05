@@ -12,7 +12,7 @@ from sklearn.metrics import (
     average_precision_score,
     balanced_accuracy_score,
     classification_report,
-    f1_score,
+    fbeta_score,
     mean_absolute_error,
     mean_squared_error,
     precision_recall_curve,
@@ -56,6 +56,7 @@ class PerformanceLogger:
         train_batches: int,
         test_batches: int,
         task_names: List[str],
+        beta: float=1
     ):
 
         if task == "binary_classification":
@@ -64,6 +65,7 @@ class PerformanceLogger:
             self.metric_initializer("roc_auc", 0)
             self.metric_initializer("accuracy", 0)
             self.metric_initializer("precision_recall", 0)
+            self.metric_initializer("f1", 0)
             self.task_final_report = self.final_report_binary_classification
         elif task == "regression":
             self.report = self.performance_report_regression
@@ -86,6 +88,8 @@ class PerformanceLogger:
         self.train_batches = train_batches
         self.test_batches = test_batches
         self.metrics = []
+        # for Fbeta score, only used in classification mode
+        self.beta = beta
 
     def metric_initializer(self, metric: str, value: float):
         setattr(self, metric, value)
@@ -120,10 +124,23 @@ class PerformanceLogger:
         # score for precision vs accuracy
         precision_recall = average_precision_score(labels, preds)
 
+        bin_preds, youden = binarize_predictions(preds, labels, return_youden=True)
+        report = classification_report(labels, bin_preds, output_dict=True)
+        negative_precision = report["0.0"]["precision"]
+        negative_recall = report["0.0"]["recall"]
+        positive_precision = report["1.0"]["precision"]
+        positive_recall = report["1.0"]["recall"]
+        f1 = fbeta_score(labels, bin_preds, beta=self.beta,pos_label=1, average='binary')
+
         logger.info(
             f"\t **** TEST **** Epoch [{self.epoch + 1}/{self.epochs}], "
-            f"loss: {loss_a:.5f}, , roc_auc: {roc_auc:.5f}, "
-            f"avg precision-recall score: {precision_recall:.5f}"
+            f"loss: {loss_a:.5f}, roc_auc: {roc_auc:.5f}, "
+            f"avg precision-recall score: {precision_recall:.5f}, "
+            f"PosPrecision: {positive_precision:.5f}, "
+            f"PosRecall: {positive_recall:.5f}, "
+            f"NegPrecision: {negative_precision:.5f}, "
+            f"NegRecall: {negative_recall:.5f}, "
+            f"F1 ({self.beta}): {f1:.5f}"
         )
         info = {
             "test_loss": loss_a,
@@ -131,7 +148,9 @@ class PerformanceLogger:
             "test_auc": roc_auc,
             "best_auc": self.roc_auc,
             "test_precision_recall": precision_recall,
-            "best_precision_recall": self.precision_recall,
+            'best_precision_recall': self.precision_recall,
+            "test_f1": f1,
+            'best_f1': self.f1
         }
         self.metrics.append(info)
         if roc_auc > self.roc_auc:
@@ -140,8 +159,12 @@ class PerformanceLogger:
             best = "ROC-AUC"
         if precision_recall > self.precision_recall:
             self.precision_recall = precision_recall
-            # self.save_model(model, "Precision-Recall", "best", value=precision_recall)
+            self.save_model(model, "Precision-Recall", "best", value=precision_recall)
             best = "Precision-Recall"
+        if f1 > self.f1:
+            self.f1 = f1
+            self.save_model(model, 'F1', 'best', value=f1)
+            best = 'F1'
         if loss_a < self.loss:
             self.loss = loss_a
             self.save_model(model, "loss", "best", value=loss_a)
@@ -219,7 +242,7 @@ class PerformanceLogger:
         positive_recall = report["1"]["recall"]
         accuracy = accuracy_score(labels, bin_preds)
         bal_accuracy = balanced_accuracy_score(labels, bin_preds)
-        f1 = f1_score(labels, bin_preds)
+        f1 = fbeta_score(labels, bin_preds, beta=0.5,pos_label=1, average='binary')
 
         info = {
             "roc_auc": roc_auc,
@@ -258,7 +281,7 @@ class PerformanceLogger:
         positive_recall = report.get("1", {"recall": 0.0})["recall"]
         accuracy = accuracy_score(bin_labels, bin_preds)
         bal_accuracy = balanced_accuracy_score(bin_labels, bin_preds)
-        f1 = f1_score(bin_labels, bin_preds)
+        f1 = fbeta_score(bin_labels, bin_preds, beta=0.5 ,pos_label=1, average='binary')
 
         info = {
             "f1": f1,
@@ -328,6 +351,9 @@ class PerformanceLogger:
         )
         logger.info(
             f"Precision-Recall = {self.precision_recall:.4f} in epoch {self.metric_df['test_precision_recall'].idxmax()} "
+        )
+        logger.info(
+            f"F1 ({self.beta})= {self.f1:.4f} in epoch {self.metric_df['test_f1'].idxmax()} "
         )
 
     def final_report_regression(self):
