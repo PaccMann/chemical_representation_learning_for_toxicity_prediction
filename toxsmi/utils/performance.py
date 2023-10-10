@@ -56,9 +56,8 @@ class PerformanceLogger:
         train_batches: int,
         test_batches: int,
         task_names: List[str],
-        beta: float=1
+        beta: float = 1,
     ):
-
         if task == "binary_classification":
             self.report = self.performance_report_binary_classification
             self.inference_report = self.inference_report_binary_classification
@@ -70,14 +69,14 @@ class PerformanceLogger:
         elif task == "regression":
             self.report = self.performance_report_regression
             self.inference_report = self.inference_report_regression
-            self.metric_initializer("rmse", 10 ** 9)
-            self.metric_initializer("mae", 10 ** 9)
+            self.metric_initializer("rmse", 10**9)
+            self.metric_initializer("mae", 10**9)
             self.metric_initializer("pearson", -1)
             self.metric_initializer("spearman", -1)
             self.task_final_report = self.final_report_regression
         else:
             raise ValueError(f"Unknown task {task}")
-        self.metric_initializer("loss", 10 ** 9)
+        self.metric_initializer("loss", 10**9)
 
         self.task = task
         self.task_names = task_names
@@ -130,7 +129,9 @@ class PerformanceLogger:
         negative_recall = report["0.0"]["recall"]
         positive_precision = report["1.0"]["precision"]
         positive_recall = report["1.0"]["recall"]
-        f1 = fbeta_score(labels, bin_preds, beta=self.beta,pos_label=1, average='binary')
+        f1 = fbeta_score(
+            labels, bin_preds, beta=self.beta, pos_label=1, average="binary"
+        )
 
         logger.info(
             f"\t **** TEST **** Epoch [{self.epoch + 1}/{self.epochs}], "
@@ -148,9 +149,9 @@ class PerformanceLogger:
             "test_auc": roc_auc,
             "best_auc": self.roc_auc,
             "test_precision_recall": precision_recall,
-            'best_precision_recall': self.precision_recall,
+            "best_precision_recall": self.precision_recall,
             "test_f1": f1,
-            'best_f1': self.f1
+            "best_f1": self.f1,
         }
         self.metrics.append(info)
         if roc_auc > self.roc_auc:
@@ -163,8 +164,8 @@ class PerformanceLogger:
             best = "Precision-Recall"
         if f1 > self.f1:
             self.f1 = f1
-            self.save_model(model, 'F1', 'best', value=f1)
-            best = 'F1'
+            self.save_model(model, "F1", "best", value=f1)
+            best = "F1"
         if loss_a < self.loss:
             self.loss = loss_a
             self.save_model(model, "loss", "best", value=loss_a)
@@ -236,13 +237,13 @@ class PerformanceLogger:
         precision, recall, _ = precision_recall_curve(labels, preds)
         precision_recall = average_precision_score(labels, preds)
         report = classification_report(labels, bin_preds, output_dict=True)
-        negative_precision = report["0"]["precision"]
-        negative_recall = report["0"]["recall"]
-        positive_precision = report["1"]["precision"]
-        positive_recall = report["1"]["recall"]
+        negative_precision = report["0.0"]["precision"]
+        negative_recall = report["0.0"]["recall"]
+        positive_precision = report["1.0"]["precision"]
+        positive_recall = report["1.0"]["recall"]
         accuracy = accuracy_score(labels, bin_preds)
         bal_accuracy = balanced_accuracy_score(labels, bin_preds)
-        f1 = fbeta_score(labels, bin_preds, beta=0.5,pos_label=1, average='binary')
+        f1 = fbeta_score(labels, bin_preds, beta=0.5, pos_label=1, average="binary")
 
         info = {
             "roc_auc": roc_auc,
@@ -281,7 +282,7 @@ class PerformanceLogger:
         positive_recall = report.get("1", {"recall": 0.0})["recall"]
         accuracy = accuracy_score(bin_labels, bin_preds)
         bal_accuracy = balanced_accuracy_score(bin_labels, bin_preds)
-        f1 = fbeta_score(bin_labels, bin_preds, beta=0.5 ,pos_label=1, average='binary')
+        f1 = fbeta_score(bin_labels, bin_preds, beta=0.5, pos_label=1, average="binary")
 
         info = {
             "f1": f1,

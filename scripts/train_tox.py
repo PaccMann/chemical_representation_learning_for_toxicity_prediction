@@ -86,7 +86,6 @@ def main(
     embedding_path: str,
     finetune_path: str,
 ):
-
     logging.basicConfig(level=logging.INFO, format="%(message)s")
     logger = logging.getLogger(f"{training_name}")
     logger.setLevel(logging.INFO)
@@ -282,7 +281,7 @@ def main(
     if finetune_path:
         if os.path.isfile(finetune_path):
             try:
-                model.load(finetune_path)
+                model.load(finetune_path, map_location=device)
                 logger.info(f"Restored pretrained model {finetune_path}")
             except Exception:
                 raise KeyError(f"Could not restore model from {finetune_path}")
@@ -313,7 +312,6 @@ def main(
     )
 
     for epoch in range(params["epochs"]):
-
         performer.epoch += 1
         model.train()
         logger.info(params_filepath.split("/")[-1])
@@ -349,7 +347,6 @@ def main(
             predictions = []
             labels = []
             for ind, (smiles, y) in enumerate(test_loader):
-
                 smiles = torch.squeeze(smiles.to(device))
                 # Transform smiles to FP if needed
                 if params.get("model_fn", "mca") == "dense":
