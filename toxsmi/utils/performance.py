@@ -106,7 +106,7 @@ class PerformanceLogger:
         preds = preds[~np.isnan(labels)]
         labels = labels[~np.isnan(labels)]
 
-        return labels, preds
+        return labels.astype(float), preds.astype(float)
 
     def performance_report_binary_classification(
         self, labels: np.array, preds: np.array, loss: float, model: Callable
@@ -125,10 +125,10 @@ class PerformanceLogger:
 
         bin_preds, youden = binarize_predictions(preds, labels, return_youden=True)
         report = classification_report(labels, bin_preds, output_dict=True)
-        negative_precision = report["0.0"]["precision"]
-        negative_recall = report["0.0"]["recall"]
-        positive_precision = report["1.0"]["precision"]
-        positive_recall = report["1.0"]["recall"]
+        negative_precision = report.get("0.0", {}).get("precision", -1)
+        negative_recall = report.get("0.0", {}).get("recall", -1)
+        positive_precision = report.get("1.0", {}).get("precision", -1)
+        positive_recall = report.get("1.0", {}).get("recall", -1)
         f1 = fbeta_score(
             labels, bin_preds, beta=self.beta, pos_label=1, average="binary"
         )
@@ -237,10 +237,10 @@ class PerformanceLogger:
         precision, recall, _ = precision_recall_curve(labels, preds)
         precision_recall = average_precision_score(labels, preds)
         report = classification_report(labels, bin_preds, output_dict=True)
-        negative_precision = report["0.0"]["precision"]
-        negative_recall = report["0.0"]["recall"]
-        positive_precision = report["1.0"]["precision"]
-        positive_recall = report["1.0"]["recall"]
+        negative_precision = report.get("0.0", {}).get("precision", -1)
+        negative_recall = report.get("0.0", {}).get("recall", -1)
+        positive_precision = report.get("1.0", {}).get("precision", -1)
+        positive_recall = report.get("1.0", {}).get("recall", -1)
         accuracy = accuracy_score(labels, bin_preds)
         bal_accuracy = balanced_accuracy_score(labels, bin_preds)
         f1 = fbeta_score(labels, bin_preds, beta=0.5, pos_label=1, average="binary")

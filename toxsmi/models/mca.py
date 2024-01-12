@@ -11,7 +11,6 @@ from paccmann_predictor.utils.layers import (
     smiles_projection,
 )
 from paccmann_predictor.utils.utils import get_device
-
 from toxsmi.utils.hyperparams import ACTIVATION_FN_FACTORY, LOSS_FN_FACTORY
 from toxsmi.utils.layers import EnsembleLayer
 
@@ -231,6 +230,7 @@ class MCAMultiTask(nn.Module):
         self.loss_name = params.get(
             "loss_fn", "binary_cross_entropy_ignore_nan_and_sum"
         )
+
         final_activation = (
             ACTIVATION_FN_FACTORY["sigmoid"]
             if "cross" in self.loss_name

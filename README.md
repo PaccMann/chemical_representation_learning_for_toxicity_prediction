@@ -82,7 +82,7 @@ where `-checkpoint` specifies which `.pt` file to pick for the evaluation (based
 
 ## Attention visualization
 The model uses a self-attention mechanism that can highlight chemical motifs used for the predictions.
-In [notebooks/toxicity_attention.ipynb](notebooks/toxicity_attention.ipynb) we share a tutorial on how to create such plots:
+In [notebooks/toxicity_attention_plot.ipynb](notebooks/toxicity_attention_plot.ipynb) we share a tutorial on how to create such plots:
 ![Attention](assets/attention.gif "toxicophore attention")
 
 
