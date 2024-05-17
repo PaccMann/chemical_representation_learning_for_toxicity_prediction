@@ -28,7 +28,7 @@ jobs:
       - name: Checkout and setup python
         uses: actions/setup-python@v2
         with:
-          python-version: 3.6
+          python-version: 3.8
           architecture: 'x64'
 
       - name: Cache pip
@@ -45,6 +45,7 @@ jobs:
           python3 -c "import toxsmi"
           python3 scripts/train_baselines.py -h
           python3 scripts/train_tox -h
+          chmod +x scripts/train_tox
           scripts/train_tox -h
 
       - name: Send Slack notification
