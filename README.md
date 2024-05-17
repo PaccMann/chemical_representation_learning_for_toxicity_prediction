@@ -38,20 +38,18 @@ print(f"Clinical toxicitiy predictions: {clintox('CCO')}")
 ### Setup
 The library itself has few dependencies (see [setup.py](setup.py)) with loose requirements. 
 ```sh
-conda env create -f conda.yml
-conda activate toxsmi
 pip install -e .
 ```
 
 ### Start a training
 
-In the `scripts` directory is a training script [train_tox.py](./scripts/train_tox.py).
+In the `scripts` directory is a training script [train_tox](./scripts/train_tox).
 
 Download sample data from the Tox21 database and store it in a folder called `data`
 [here](https://ibm.box.com/s/kahxnlg2k2s0x3z0r5fa6y67tmfhs6or). 
 
 ```console
-(toxsmi) $ python3 scripts/train_tox.py \
+(toxsmi) $ python3 scripts/train_tox \
 --train data/tox21_train.csv \
 --test data/tox21_score.csv \
 --smi data/tox21.smi \
@@ -64,7 +62,7 @@ Download sample data from the Tox21 database and store it in a folder called `da
 - Set ```--finetune``` to the path to a `.pt` file to start from a pretrained model
 - Set ```--embedding_path``` to the path of pretrained embeddings
 
-Type `python scripts/train_tox.py -h` for further help.
+Type `python scripts/train_tox -h` for further help.
 
 ### Evaluate a model
 In the `scripts` directory is an evaluation script [eval_tox.py](./scripts/eval_tox.py).
