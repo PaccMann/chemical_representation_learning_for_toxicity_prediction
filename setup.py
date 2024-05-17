@@ -32,8 +32,6 @@ setup(
         "paccmann_predictor @ git+https://github.com/PaccMann/paccmann_predictor",
         "numpy>=1.14.3",
         "torch",
-        "deepchem",
-        "tensorflow>=2.0",
         "Pillow",
         "six",
         "scikit-learn>=0.21.3",
@@ -43,5 +41,5 @@ setup(
     ],
     packages=find_packages("."),
     zip_safe=False,
-    scripts=['scripts/train_tox']
+    scripts=['scripts/train_tox', 'scripts/eval_tox']
 )
