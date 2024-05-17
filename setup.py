@@ -30,14 +30,18 @@ setup(
     author_email=("jab@zurich.ibm.com, greta.markert@gmail.com, drugilsberg@gmail.com"),
     install_requires=[
         "paccmann_predictor @ git+https://github.com/PaccMann/paccmann_predictor",
+        "numpy>=1.14.3",
         "torch",
         "deepchem",
         "tensorflow>=2.0",
         "Pillow",
         "six",
+        "scikit-learn>=0.21.3",
         "brc_pytorch>=0.1.3",
         "pytoda>=1.1.2",
+        "rdkit"
     ],
     packages=find_packages("."),
     zip_safe=False,
+    scripts=['scripts/train_tox']
 )
