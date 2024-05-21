@@ -1,4 +1,4 @@
-paccmann_predictor @ git+https://github.com/PaccMann/paccmann_predictor@sarscov2
+paccmann_predictor
 numpy>=1.14.3
 torch
 six
