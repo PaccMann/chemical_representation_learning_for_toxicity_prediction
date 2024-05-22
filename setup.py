@@ -33,7 +33,7 @@ setup(
         'jab@zurich.ibm.com, greta.markert@gmail.com, drugilsberg@gmail.com'
     ),
     install_requires=[
-        'paccmann_predictor @ git+https://github.com/PaccMann/paccmann_predictor',
+        'paccmann_predictor @ git+https://github.com/PaccMann/paccmann_predictor@sarscov2',
         'torch', 'deepchem>=2.4', 'tensorflow>=2.0', 'Pillow', 'six'
     ],
     packages=find_packages('.'),
